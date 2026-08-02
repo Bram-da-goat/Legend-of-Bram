@@ -45,6 +45,13 @@
             <div class="hero-slot empty"><span>+</span><div><strong>Hero Slot 3</strong><small>Coming soon</small></div></div>
             <div class="hero-slot empty"><span>+</span><div><strong>Hero Slot 4</strong><small>Coming soon</small></div></div>
           </div>
+          <button id="inventoryButton" class="secondary inventory-button" type="button">Inventory</button>
+        </aside>
+        <aside id="inventoryPanel" class="inventory-panel" aria-label="Inventory" hidden>
+          <div class="inventory-heading"><div><p class="eyebrow">BRAM'S PACK</p><h2>Inventory</h2></div><button id="closeInventory" class="inventory-close" type="button" aria-label="Close inventory">×</button></div>
+          <section class="inventory-section"><h3>Weapons</h3><ul id="weaponList"></ul></section>
+          <section class="inventory-section"><h3>Materials</h3><ul id="materialList"></ul></section>
+          <section class="inventory-section"><h3>Key Items</h3><ul id="keyItemList"></ul></section>
         </aside>
         <section id="controls" class="controls"><button id="startWave" hidden>Start wave</button><button id="returnWorld" hidden class="secondary">Return to world</button></section>
         <p id="help" class="help">Move: WASD / arrows · Q/E rotate camera · C changes zoom</p>
