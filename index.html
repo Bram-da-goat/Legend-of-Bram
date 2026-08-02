@@ -31,12 +31,20 @@
         <div id="message" class="message">Walk Bram into the red patrol marker.</div>
         <section id="bossBar" class="boss-bar" hidden><strong id="bossName">Knight</strong><div><i id="bossFill"></i></div></section>
         <aside id="npcDialogue" class="npc-dialogue" hidden></aside>
-        <section class="character-card">
-          <p class="eyebrow">YOUR HERO</p>
-          <h2>Bram</h2>
-          <p>Stoneguard</p>
-          <dl><div><dt>Weapon</dt><dd>Ironbark Hammer</dd></div><div><dt>Defense</dt><dd>28 damage · 4.4 range</dd></div></dl>
-        </section>
+        <aside class="party-panel" aria-label="Party roster">
+          <p class="eyebrow">YOUR PARTY</p>
+          <article class="hero-slot active">
+            <div class="hero-token">B</div>
+            <div><h2>Bram</h2><p>Stoneguard</p></div>
+            <span class="active-tag">LEADER</span>
+          </article>
+          <dl class="hero-stats"><div><dt>Weapon</dt><dd>Hammer</dd></div><div><dt>Attack</dt><dd>65 damage · 4.8 range</dd></div></dl>
+          <div class="empty-slots">
+            <div class="hero-slot empty"><span>+</span><div><strong>Hero Slot 2</strong><small>Coming soon</small></div></div>
+            <div class="hero-slot empty"><span>+</span><div><strong>Hero Slot 3</strong><small>Coming soon</small></div></div>
+            <div class="hero-slot empty"><span>+</span><div><strong>Hero Slot 4</strong><small>Coming soon</small></div></div>
+          </div>
+        </aside>
         <section id="controls" class="controls"><button id="startWave" hidden>Start wave</button><button id="returnWorld" hidden class="secondary">Return to world</button></section>
         <p id="help" class="help">Move: WASD / arrows · Q/E rotate camera · C changes zoom</p>
       </section>
