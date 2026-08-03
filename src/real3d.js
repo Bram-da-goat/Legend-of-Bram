@@ -81,6 +81,9 @@ const teleporterTown=new T.Group();teleporterTown.position.set(100,0,100);telepo
 })();
 // Keep roaming bands inside the meadow so they never move into the surrounding mountains.
 function keepBandInMeadow(band){const meadowRadius=13.5;if(band.userData.home.length()>meadowRadius)band.userData.home.setLength(meadowRadius);if(band.position.length()>meadowRadius)band.position.setLength(meadowRadius)}const originalGoblinMove=goblinMove;goblinMove=d=>{originalGoblinMove(d);bands.filter(band=>band.visible).forEach(keepBandInMeadow)};const originalBandSpawn=spawnGoblinBand;spawnGoblinBand=()=>{originalBandSpawn();bands.filter(band=>band.visible).forEach(keepBandInMeadow)};
+// Keep the teleporter prompt stable and suppress generic goblin-band announcements.
+var inTeleporterTown=false;
+const teleporterPrompt=$('#teleporterPrompt');setInterval(()=>{const nearTeleporter=state==='world'&&!inTeleporterTown&&bram.position.distanceTo(teleporter.position)<=2.7;teleporterPrompt.hidden=!nearTeleporter;if(nearTeleporter)teleporterPrompt.textContent=hasTeleporterKey()?'Press E to enter Starfall Town.':'Teleporter locked — requires the Teleporter Key.';msg.classList.remove('band-alert')},100);const quietGoblinMove=goblinMove;goblinMove=d=>{quietGoblinMove(d);if(msg.textContent.startsWith('A group of goblins have appeared'))msg.textContent=''};
 // Give the Hammer tile its own sledgehammer-shaped icon after the inventory renderers initialize.
 setTimeout(()=>{const keyRenderInventory=renderInventory;renderInventory=()=>{keyRenderInventory();const hammerIcon=weaponList.querySelector('.item-icon');if(hammerIcon){hammerIcon.textContent='';hammerIcon.classList.add('sledge-icon')}};renderInventory()},20);
 // Remove category tags from key-item tiles after the icon inventory renderer initializes.
