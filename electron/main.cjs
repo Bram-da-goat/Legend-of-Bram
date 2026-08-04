@@ -1,8 +1,9 @@
 const { app, BrowserWindow, Menu } = require('electron');
 const path = require('path');
+let mainWindow;
 
 function createWindow() {
-  const window = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 1440,
     height: 900,
     minWidth: 1024,
@@ -18,7 +19,15 @@ function createWindow() {
   });
 
   Menu.setApplicationMenu(null);
-  window.loadFile(path.join(__dirname, '..', 'dist', 'index.html'));
+  let loadPromise;
+  if (!app.isPackaged && process.argv.includes('--dev')) {
+    loadPromise = mainWindow.loadURL('http://127.0.0.1:5173');
+  } else {
+    loadPromise = mainWindow.loadFile(path.join(__dirname, '..', 'dist', 'index.html'));
+  }
+  loadPromise.catch(error => console.error('Game window failed to load:', error));
+  mainWindow.webContents.on('did-finish-load', () => console.log('Legend of Bram window loaded.'));
+  mainWindow.on('closed', () => { mainWindow = null; });
 }
 
 app.whenReady().then(() => {

@@ -10,6 +10,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "desktop": "npm run build && electron .",
+    "desktop:dev": "node electron/dev.cjs",
     "package:win": "npm run build && electron-builder --win nsis",
     "package:portable": "npm run build && electron-builder --win portable"
   },
