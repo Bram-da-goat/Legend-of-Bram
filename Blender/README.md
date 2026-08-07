@@ -28,4 +28,31 @@ Run Blender in the background from the repository root:
 & 'C:\Program Files\Blender Foundation\Blender 5.2\blender.exe' --background --python 'Blender\build_weapon_pack.py'
 ```
 
-The next Blender milestone should be a rigged Bram character with sockets for these three weapons, followed by goblin and orc base meshes.
+## Core model pack
+
+`LegendOfBram_CoreModels.blend` contains the current game's reusable 3D roster. Each model also has an individual Unreal-ready FBX beside the blend file.
+
+Characters and enemies:
+
+- `CH_Bram`
+- `CH_Goblin`
+- `CH_Orc`
+- `CH_Knight`
+- `CH_Necromancer`
+- `CH_Zombie`
+
+World models:
+
+- `SM_Teleporter`
+- `SM_MeadowTree`
+- `SM_MeadowBoulder`
+- `SM_MountainOutcrop`
+- `SM_StoneGate`
+- `SM_Blacksmith`
+- `SM_Shop`
+- `SM_TownHouse`
+- `SM_AltarOfSteve`
+- `SM_Crate`
+- `SM_Barrel`
+
+Run `build_core_models.py` through Blender to regenerate the consolidated blend, 17 FBXs, and both preview renders.
