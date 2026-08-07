@@ -3,10 +3,10 @@ import math
 from pathlib import Path
 from mathutils import Vector
 
-ROOT = Path(__file__).resolve().parents[1]
-EXPORT_DIR = ROOT / "Exports" / "Weapons"
-PREVIEW_DIR = ROOT / "Previews"
-BLEND_DIR = ROOT / "Blend"
+ROOT = Path(__file__).resolve().parent
+EXPORT_DIR = ROOT
+PREVIEW_DIR = ROOT
+BLEND_DIR = ROOT
 for folder in (EXPORT_DIR, PREVIEW_DIR, BLEND_DIR):
     folder.mkdir(parents=True, exist_ok=True)
 
@@ -251,6 +251,36 @@ def build_supplied_axe():
     return weapon
 
 
+def build_standard_woodcutter_axe():
+    # A practical, conventional felling axe: gently curved hickory haft, compact forged
+    # poll, broad convex bit, and a modest wrapped lower grip.
+    handle_points = [(0.012, 0, 0.04), (-0.010, 0, 0.27), (0.008, 0, 0.53), (-0.006, 0, 0.76), (0, 0, 0.96)]
+    parts = [curved_handle("Axe_HickoryHandle", handle_points, 0.034, WOOD)]
+    parts += leather_wraps(0.08, 0.28, 0.038, 7)
+    parts.append(cylinder("Axe_HeadEye", (0, 0, 0.92), 0.050, 0.16, IRON, 18))
+    outline = [(0.12, 0.83), (0.12, 1.03), (-0.06, 1.09), (-0.31, 1.04),
+               (-0.43, 0.91), (-0.31, 0.77), (-0.06, 0.81)]
+    verts = [(x, -0.040, z) for x, z in outline] + [(x, 0.040, z) for x, z in outline]
+    count = len(outline)
+    faces = [tuple(range(count)), tuple(range(count, count * 2))[::-1]]
+    for index in range(count):
+        next_index = (index + 1) % count
+        faces.append((index, next_index, count + next_index, count + index))
+    mesh = bpy.data.meshes.new("StandardWoodcutterAxeHeadMesh")
+    mesh.from_pydata(verts, [], faces)
+    mesh.update()
+    head = bpy.data.objects.new("Axe_ForgedWedgeHead", mesh)
+    bpy.context.collection.objects.link(head)
+    head.data.materials.append(STEEL)
+    apply_bevel(head, 0.012, 3)
+    parts.append(head)
+    # Two polished edge strips approximate a traditional slightly convex cutting bit.
+    parts.append(bar_between("Axe_EdgeUpper", (-0.31, 0, 1.04), (-0.43, 0, 0.91), 0.012, 0.047, EDGE))
+    parts.append(bar_between("Axe_EdgeLower", (-0.43, 0, 0.91), (-0.31, 0, 0.77), 0.012, 0.047, EDGE))
+    parts.append(cube("Axe_FlatPoll", (0.125, 0, 0.93), (0.055, 0.052, 0.082), IRON, 0.012))
+    return join_weapon(parts, "SM_Bram_WoodcutterAxe")
+
+
 def orient_from_z(obj, direction):
     obj.rotation_mode = "QUATERNION"
     obj.rotation_quaternion = Vector((0, 0, 1)).rotation_difference(Vector(direction).normalized())
@@ -282,7 +312,7 @@ def build_orc_club():
     return join_weapon(parts, "SM_Bram_OrcWarClub")
 
 
-weapons = [build_hammer(), build_supplied_axe(), build_orc_club()]
+weapons = [build_hammer(), build_standard_woodcutter_axe(), build_orc_club()]
 
 
 def export_fbx(obj):
