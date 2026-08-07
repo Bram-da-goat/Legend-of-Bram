@@ -216,11 +216,14 @@ def build_axe():
 
 
 def build_standard_woodcutter_axe():
-    # A recognizable professional felling axe: slim hickory haft, restrained poll,
-    # forged cheek, flared convex bit, and a clean polished cutting band.
+    # A fantasy woodcutter's axe with the same warm wood, dark iron, leather,
+    # and bright-edge language as Bram's hammer and the Orc War Club.
     handle_points = [(0.014, 0, 0.035), (-0.006, 0, 0.20), (-0.020, 0, 0.42),
                      (0.002, 0, 0.64), (0, 0, 0.88)]
-    parts = [curved_handle("Axe_SlimHickoryHaft", handle_points, 0.027, WOOD)]
+    parts = [curved_handle("Axe_ShapedOakHaft", handle_points, 0.031, WOOD)]
+    parts += leather_wraps(0.08, 0.27, 0.035, 6)
+    parts.append(torus("Axe_GripPommel", (0.014, 0, 0.045), 0.043, 0.010, IRON))
+    parts.append(torus("Axe_HeadCollar", (0, 0, 0.765), 0.046, 0.012, IRON))
 
     def profile_prism(name, outline, half_depth, mat, bevel):
         vertices = [(x, -half_depth, z) for x, z in outline] + [(x, half_depth, z) for x, z in outline]
@@ -238,12 +241,21 @@ def build_standard_woodcutter_axe():
         apply_bevel(obj, bevel, 3)
         return obj
 
-    blade_outline = [(-0.025, 0.755), (-0.025, 0.925), (-0.19, 0.97), (-0.34, 0.94),
-                     (-0.405, 0.895), (-0.405, 0.715), (-0.34, 0.67), (-0.19, 0.695)]
-    parts.append(profile_prism("Axe_FlaredForgedBlade", blade_outline, 0.034, STEEL, 0.007))
-    parts.append(cube("Axe_CompactEye", (0.025, 0, 0.84), (0.105, 0.046, 0.087), STEEL, 0.012))
-    parts.append(bar_between("Axe_BrightCuttingEdge", (-0.405, 0, 0.71), (-0.405, 0, 0.90), 0.012, 0.050, EDGE))
-    parts.append(cube("Axe_CompactPoll", (0.145, 0, 0.84), (0.045, 0.048, 0.065), IRON, 0.008))
+    blade_outline = [
+        (0.045, 0.745), (0.045, 0.945), (-0.105, 1.005),
+        (-0.300, 0.985), (-0.410, 0.915), (-0.525, 0.575),
+        (-0.405, 0.635), (-0.235, 0.715), (-0.095, 0.745),
+    ]
+    parts.append(profile_prism("Axe_PointForgedBlade", blade_outline, 0.038, STEEL, 0.008))
+
+    # The bright inset follows the long diagonal bit and finishes in a sharp toe.
+    edge_outline = [
+        (-0.410, 0.915), (-0.525, 0.575),
+        (-0.475, 0.601), (-0.365, 0.886),
+    ]
+    parts.append(profile_prism("Axe_PolishedCuttingEdge", edge_outline, 0.041, EDGE, 0.004))
+    parts.append(cube("Axe_ReinforcedEye", (0.035, 0, 0.842), (0.108, 0.050, 0.092), STEEL, 0.013))
+    parts.append(cube("Axe_CompactPoll", (0.158, 0, 0.842), (0.048, 0.050, 0.067), IRON, 0.009))
     return join_weapon(parts, "SM_Bram_WoodcutterAxe")
 
 
@@ -256,6 +268,19 @@ def orient_from_z(obj, direction):
 def build_orc_club():
     parts = [cone("Club_Handle", (0, 0, 0.52), 0.045, 0.085, 1.04, DARK_WOOD, 18)]
     parts += leather_wraps(0.10, 0.40, 0.052, 8)
+    parts.append(torus("Club_SpikedPommelBand", (0, 0, 0.075), 0.061, 0.014, IRON))
+    pommel_directions = [
+        (1, 0, 0.05), (-1, 0, 0.05), (0.5, 0.866, 0.05),
+        (-0.5, 0.866, 0.05), (0.5, -0.866, 0.05), (-0.5, -0.866, 0.05),
+    ]
+    for index, direction in enumerate(pommel_directions):
+        d = Vector(direction).normalized()
+        spike = cone(f"Club_PommelSpike_{index:02}", d * 0.072 + Vector((0, 0, 0.075)),
+                     0.027, 0.0025, 0.13, IRON, 8)
+        orient_from_z(spike, d)
+        parts.append(spike)
+    parts.append(cone("Club_PommelSpike_Down", (0, 0, -0.005), 0.030, 0.0025,
+                      0.16, IRON, 8, rotation=(math.pi, 0, 0)))
     parts.append(torus("Club_Band_Lower", (0, 0, 0.43), 0.061, 0.012, IRON))
     parts.append(torus("Club_Band_Upper", (0, 0, 0.83), 0.082, 0.014, IRON))
     head = cone("Club_Head", (0, 0, 1.02), 0.18, 0.12, 0.42, WOOD, 12)
@@ -303,7 +328,7 @@ for index, weapon in enumerate(weapons):
     copy.data = weapon.data.copy()
     preview_collection.objects.link(copy)
     copy.name = f"PREVIEW_{weapon.name}"
-    copy.location = ((index - 1) * 1.15, 0, 0.02)
+    copy.location = ((index - 1) * 1.15, 0, 0.15 if index == 2 else 0.02)
     copy.rotation_euler = (math.radians(10), math.radians(-12), math.radians(-18))
     weapon.hide_render = True
     weapon.hide_viewport = True
