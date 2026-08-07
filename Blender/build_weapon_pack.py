@@ -215,42 +215,6 @@ def build_axe():
     return join_weapon(parts, "SM_Bram_WoodcutterAxe")
 
 
-def build_supplied_axe():
-    source_path = ROOT / "Source" / "86-axe" / "Axe.blend"
-    if not source_path.exists():
-        raise FileNotFoundError(f"Supplied axe source is missing: {source_path}")
-    with bpy.data.libraries.load(str(source_path), link=False) as (source, destination):
-        destination.objects = [name for name in source.objects if name in {"Axt", "Griff"}]
-    source_parts = [obj for obj in destination.objects if obj is not None]
-    for obj in source_parts:
-        bpy.context.collection.objects.link(obj)
-    head = next(obj for obj in source_parts if obj.name == "Axt")
-    handle = next(obj for obj in source_parts if obj.name == "Griff")
-    head.name = "Axe_SuppliedForgedHead"
-    # Keep the supplied forged head, but replace its original curved haft with the exact
-    # straight oak shaft, leather wraps, and iron collar used by Bram's sledgehammer.
-    bpy.data.objects.remove(handle, do_unlink=True)
-    head.location = (0, 0, 0.93)
-    bpy.context.view_layer.objects.active = head
-    head.select_set(True)
-    bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
-    head.select_set(False)
-    parts = [head, cylinder("Axe_SledgeHandle", (0, 0, 0.48), 0.035, 0.96, WOOD, 18, scale=(1.0, 0.92, 1.0))]
-    parts += leather_wraps(0.10, 0.36, 0.038, 8)
-    parts.append(cylinder("Axe_SledgeCollar", (0, 0, 0.80), 0.052, 0.10, IRON, 16))
-    weapon = join_weapon(parts, "SM_Bram_WoodcutterAxe")
-    material_names = {
-        "holz2-2": "M_Axe_Wood",
-        "Eisen Axt": "M_Axe_ForgedIron",
-        "Eisen Axt2": "M_Axe_PolishedEdge",
-        "Dots Stroke": "M_Axe_Detail",
-    }
-    for slot in weapon.material_slots:
-        if slot.material and slot.material.name in material_names:
-            slot.material.name = material_names[slot.material.name]
-    return weapon
-
-
 def build_standard_woodcutter_axe():
     # A practical, conventional felling axe: gently curved hickory haft, compact forged
     # poll, broad convex bit, and a modest wrapped lower grip.
