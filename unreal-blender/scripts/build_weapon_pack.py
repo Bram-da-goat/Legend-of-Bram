@@ -46,6 +46,7 @@ EDGE = material("M_Steel_Edge", (0.48, 0.54, 0.56), 0.92, 0.12)
 IRON = material("M_Black_Iron", (0.035, 0.042, 0.043), 0.75, 0.3)
 LEATHER = material("M_Leather", (0.095, 0.028, 0.012), 0.0, 0.68)
 BONE = material("M_Orc_Bone", (0.42, 0.34, 0.21), 0.0, 0.57)
+COPPER = material("M_Aged_Copper", (0.34, 0.105, 0.035), 0.68, 0.3)
 
 
 def apply_bevel(obj, width=0.01, segments=3):
@@ -134,22 +135,83 @@ def build_hammer():
     return join_weapon(parts, "SM_Bram_Hammer")
 
 
+def curved_handle(name, points, radius, mat):
+    curve = bpy.data.curves.new(f"{name}_Curve", "CURVE")
+    curve.dimensions = "3D"
+    curve.resolution_u = 3
+    curve.bevel_depth = radius
+    curve.bevel_resolution = 3
+    curve.resolution_u = 3
+    spline = curve.splines.new("BEZIER")
+    spline.bezier_points.add(len(points) - 1)
+    for point, position in zip(spline.bezier_points, points):
+        point.co = position
+        point.handle_left_type = "AUTO"
+        point.handle_right_type = "AUTO"
+    obj = bpy.data.objects.new(name, curve)
+    bpy.context.collection.objects.link(obj)
+    obj.data.materials.append(mat)
+    bpy.context.view_layer.objects.active = obj
+    obj.select_set(True)
+    bpy.ops.object.convert(target="MESH")
+    return bpy.context.object
+
+
+def bar_between(name, start, end, width, depth, mat):
+    start, end = Vector(start), Vector(end)
+    delta = end - start
+    obj = cube(name, (start + end) * 0.5, (width, depth, delta.length * 0.5), mat, min(width * .45, .007))
+    obj.rotation_mode = "QUATERNION"
+    obj.rotation_quaternion = Vector((0, 0, 1)).rotation_difference(delta.normalized())
+    obj.rotation_mode = "XYZ"
+    bpy.context.view_layer.objects.active = obj
+    obj.select_set(True)
+    bpy.ops.object.transform_apply(location=False, rotation=True, scale=False)
+    return obj
+
+
 def build_axe():
-    parts = [cylinder("Axe_Handle", (0, 0, 0.48), 0.032, 0.96, WOOD, 18, scale=(0.9, 1.05, 1.0))]
-    parts += leather_wraps(0.10, 0.32, 0.035, 7)
-    parts.append(cylinder("Axe_Collar", (0, 0, 0.82), 0.048, 0.10, IRON, 16))
-    verts = [(-0.03, -0.035, 0.80), (-0.03, -0.035, 1.05), (-0.33, -0.022, 1.12), (-0.40, -0.018, 0.91),
-             (-0.03, 0.035, 0.80), (-0.03, 0.035, 1.05), (-0.33, 0.022, 1.12), (-0.40, 0.018, 0.91)]
-    faces = [(0, 1, 2, 3), (4, 7, 6, 5), (0, 4, 5, 1), (1, 5, 6, 2), (2, 6, 7, 3), (3, 7, 4, 0)]
+    # A distinct Bram design: a curved working haft, long hooked beard, rear striking poll,
+    # crossed leather bindings, and a restrained copper inlay instead of copying the reference.
+    handle_points = [(0.018, 0, 0.04), (-0.008, 0, 0.30), (0.018, 0, 0.57), (-0.012, 0, 0.81), (0, 0, 1.02)]
+    parts = [curved_handle("Axe_CurvedOakHaft", handle_points, 0.033, WOOD)]
+    parts += leather_wraps(0.08, 0.30, 0.037, 8)
+    parts += leather_wraps(0.76, 0.88, 0.040, 5)
+    parts.append(cylinder("Axe_IronEye", (0, 0, 0.94), 0.052, 0.18, IRON, 18))
+    outline = [(-0.035, 0.79), (-0.035, 1.12), (-0.13, 1.16), (-0.24, 1.08),
+               (-0.39, 1.02), (-0.49, 0.72), (-0.30, 0.75), (-0.20, 0.87)]
+    verts = [(x, -0.034, z) for x, z in outline] + [(x, 0.034, z) for x, z in outline]
+    count = len(outline)
+    faces = [tuple(range(count)), tuple(range(count, count * 2))[::-1]]
+    for i in range(count):
+        j = (i + 1) % count
+        faces.append((i, j, count + j, count + i))
     mesh = bpy.data.meshes.new("AxeBladeMesh")
     mesh.from_pydata(verts, [], faces)
     mesh.update()
-    blade = bpy.data.objects.new("Axe_Blade", mesh)
+    blade = bpy.data.objects.new("Axe_BeardedBlade", mesh)
     bpy.context.collection.objects.link(blade)
     blade.data.materials.append(STEEL)
-    apply_bevel(blade, 0.012, 3)
-    edge = cube("Axe_Cutting_Edge", (-0.38, 0, 0.985), (0.025, 0.045, 0.12), EDGE, 0.008, rotation=(0, -0.20, 0))
-    parts.extend([blade, edge])
+    apply_bevel(blade, 0.009, 3)
+    edge = bar_between("Axe_PolishedEdge", (-0.485, 0, 0.72), (-0.39, 0, 1.02), 0.014, 0.041, EDGE)
+    poll = cube("Axe_RearPoll", (0.09, 0, 1.025), (0.105, 0.055, 0.075), STEEL, 0.018)
+    poll.scale.x = 0.86
+    top_cap = cube("Axe_Crown", (-0.015, 0, 1.145), (0.09, 0.052, 0.035), EDGE, 0.012)
+    parts.extend([blade, edge, poll, top_cap])
+    # Cross-lashed leather secures the head, while copper pins give Bram's axe its own identity.
+    for side in (-0.043, 0.043):
+        parts.append(bar_between(f"Axe_Lash_A_{side}", (-0.17, side, 0.86), (0.08, side, 1.10), 0.009, 0.006, LEATHER))
+        parts.append(bar_between(f"Axe_Lash_B_{side}", (-0.17, side, 1.09), (0.08, side, 0.86), 0.009, 0.006, LEATHER))
+    for index, location in enumerate(((-0.11, -0.044, 0.98), (-0.11, 0.044, 0.98))):
+        bpy.ops.mesh.primitive_uv_sphere_add(segments=12, ring_count=6, radius=0.022, location=location)
+        pin = bpy.context.object
+        pin.name = f"Axe_CopperPin_{index}"
+        pin.scale.y = .38
+        bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+        pin.data.materials.append(COPPER)
+        parts.append(pin)
+    inlay = bar_between("Axe_CopperInlay", (-0.29, -0.037, 0.83), (-0.22, -0.037, 1.04), 0.007, 0.004, COPPER)
+    parts.append(inlay)
     return join_weapon(parts, "SM_Bram_WoodcutterAxe")
 
 
