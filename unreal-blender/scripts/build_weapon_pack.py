@@ -221,21 +221,23 @@ def build_supplied_axe():
         raise FileNotFoundError(f"Supplied axe source is missing: {source_path}")
     with bpy.data.libraries.load(str(source_path), link=False) as (source, destination):
         destination.objects = [name for name in source.objects if name in {"Axt", "Griff"}]
-    parts = [obj for obj in destination.objects if obj is not None]
-    for obj in parts:
+    source_parts = [obj for obj in destination.objects if obj is not None]
+    for obj in source_parts:
         bpy.context.collection.objects.link(obj)
-    head = next(obj for obj in parts if obj.name == "Axt")
-    handle = next(obj for obj in parts if obj.name == "Griff")
+    head = next(obj for obj in source_parts if obj.name == "Axt")
+    handle = next(obj for obj in source_parts if obj.name == "Griff")
     head.name = "Axe_SuppliedForgedHead"
-    handle.name = "Axe_SuppliedWoodHandle"
-    # Normalize the source model around the bottom-center of its grip without changing its proportions.
-    pivot = Vector((handle.location.x, handle.location.y, handle.location.z - handle.dimensions.z * 0.5))
-    for obj in parts:
-        obj.location -= pivot
-        bpy.context.view_layer.objects.active = obj
-        obj.select_set(True)
-        bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
-        obj.select_set(False)
+    # Keep the supplied forged head, but replace its original curved haft with the exact
+    # straight oak shaft, leather wraps, and iron collar used by Bram's sledgehammer.
+    bpy.data.objects.remove(handle, do_unlink=True)
+    head.location = (0, 0, 0.93)
+    bpy.context.view_layer.objects.active = head
+    head.select_set(True)
+    bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
+    head.select_set(False)
+    parts = [head, cylinder("Axe_SledgeHandle", (0, 0, 0.48), 0.035, 0.96, WOOD, 18, scale=(1.0, 0.92, 1.0))]
+    parts += leather_wraps(0.10, 0.36, 0.038, 8)
+    parts.append(cylinder("Axe_SledgeCollar", (0, 0, 0.80), 0.052, 0.10, IRON, 16))
     weapon = join_weapon(parts, "SM_Bram_WoodcutterAxe")
     material_names = {
         "holz2-2": "M_Axe_Wood",
