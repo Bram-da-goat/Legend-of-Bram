@@ -215,6 +215,40 @@ def build_axe():
     return join_weapon(parts, "SM_Bram_WoodcutterAxe")
 
 
+def build_supplied_axe():
+    source_path = ROOT / "Source" / "86-axe" / "Axe.blend"
+    if not source_path.exists():
+        raise FileNotFoundError(f"Supplied axe source is missing: {source_path}")
+    with bpy.data.libraries.load(str(source_path), link=False) as (source, destination):
+        destination.objects = [name for name in source.objects if name in {"Axt", "Griff"}]
+    parts = [obj for obj in destination.objects if obj is not None]
+    for obj in parts:
+        bpy.context.collection.objects.link(obj)
+    head = next(obj for obj in parts if obj.name == "Axt")
+    handle = next(obj for obj in parts if obj.name == "Griff")
+    head.name = "Axe_SuppliedForgedHead"
+    handle.name = "Axe_SuppliedWoodHandle"
+    # Normalize the source model around the bottom-center of its grip without changing its proportions.
+    pivot = Vector((handle.location.x, handle.location.y, handle.location.z - handle.dimensions.z * 0.5))
+    for obj in parts:
+        obj.location -= pivot
+        bpy.context.view_layer.objects.active = obj
+        obj.select_set(True)
+        bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
+        obj.select_set(False)
+    weapon = join_weapon(parts, "SM_Bram_WoodcutterAxe")
+    material_names = {
+        "holz2-2": "M_Axe_Wood",
+        "Eisen Axt": "M_Axe_ForgedIron",
+        "Eisen Axt2": "M_Axe_PolishedEdge",
+        "Dots Stroke": "M_Axe_Detail",
+    }
+    for slot in weapon.material_slots:
+        if slot.material and slot.material.name in material_names:
+            slot.material.name = material_names[slot.material.name]
+    return weapon
+
+
 def orient_from_z(obj, direction):
     obj.rotation_mode = "QUATERNION"
     obj.rotation_quaternion = Vector((0, 0, 1)).rotation_difference(Vector(direction).normalized())
@@ -246,7 +280,7 @@ def build_orc_club():
     return join_weapon(parts, "SM_Bram_OrcWarClub")
 
 
-weapons = [build_hammer(), build_axe(), build_orc_club()]
+weapons = [build_hammer(), build_supplied_axe(), build_orc_club()]
 
 
 def export_fbx(obj):

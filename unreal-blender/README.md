@@ -18,6 +18,8 @@ This workspace contains source `.blend` files and Unreal-ready exports for the r
 
 The editable source is `Blend/LegendOfBram_WeaponPack.blend`. A rendered look-development image is saved under `Previews`.
 
+The Woodcutter Axe is built from the user-supplied `Source/86-axe/Axe.blend`. The supplied archive contained no separate license or readme file. The build script preserves its geometry while normalizing its origin, transforms, naming, and Unreal export settings.
+
 ## Rebuild
 
 Run Blender in the background from the repository root:
