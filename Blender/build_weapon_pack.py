@@ -287,6 +287,19 @@ def build_orc_club():
     parts.append(head)
     for z in (0.90, 1.03, 1.16):
         parts.append(torus(f"Club_HeadBand_{z}", (0, 0, z), 0.155 - abs(1.03 - z) * 0.22, 0.018, IRON))
+    # A dedicated spike ring on the lower tapered skirt of the club head.
+    # Keep it below the lowest head band so this previously bare section reads
+    # as part of the weapon's dangerous striking surface from every angle.
+    for index in range(8):
+        angle = index * math.tau / 8
+        direction = Vector((math.cos(angle), math.sin(angle), -0.10)).normalized()
+        spike = cone(
+            f"Club_LowerHeadSpike_{index:02}",
+            direction * 0.135 + Vector((0, 0, 0.845)),
+            0.035, 0.003, 0.16, IRON, 8,
+        )
+        orient_from_z(spike, direction)
+        parts.append(spike)
     directions = [(1, 0, .18), (-1, 0, .18), (0, 1, -.08), (0, -1, -.08), (.7, .7, .1), (-.7, .7, .1), (.7, -.7, .1), (-.7, -.7, .1)]
     for index, direction in enumerate(directions):
         z = 1.00 + (index % 3 - 1) * 0.10
