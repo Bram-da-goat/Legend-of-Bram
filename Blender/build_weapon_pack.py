@@ -42,7 +42,7 @@ def material(name, color, metallic=0.0, roughness=0.5):
 WOOD = material("M_Wood_Oak", (0.24, 0.075, 0.025), 0.0, 0.42)
 DARK_WOOD = material("M_Wood_Orc", (0.12, 0.032, 0.012), 0.0, 0.58)
 STEEL = material("M_Steel", (0.19, 0.22, 0.23), 0.82, 0.22)
-EDGE = material("M_Steel_Edge", (0.48, 0.54, 0.56), 0.92, 0.12)
+EDGE = material("M_Steel_Edge", (0.72, 0.78, 0.80), 0.92, 0.16)
 IRON = material("M_Black_Iron", (0.035, 0.042, 0.043), 0.75, 0.3)
 LEATHER = material("M_Leather", (0.095, 0.028, 0.012), 0.0, 0.68)
 BONE = material("M_Orc_Bone", (0.42, 0.34, 0.21), 0.0, 0.57)
@@ -216,32 +216,34 @@ def build_axe():
 
 
 def build_standard_woodcutter_axe():
-    # A practical, conventional felling axe: gently curved hickory haft, compact forged
-    # poll, broad convex bit, and a modest wrapped lower grip.
-    handle_points = [(0.012, 0, 0.04), (-0.010, 0, 0.27), (0.008, 0, 0.53), (-0.006, 0, 0.76), (0, 0, 0.96)]
-    parts = [curved_handle("Axe_HickoryHandle", handle_points, 0.034, WOOD)]
-    parts += leather_wraps(0.08, 0.28, 0.038, 7)
-    parts.append(cylinder("Axe_HeadEye", (0, 0, 0.92), 0.050, 0.16, IRON, 18))
-    outline = [(0.12, 0.83), (0.12, 1.03), (-0.06, 1.09), (-0.31, 1.04),
-               (-0.43, 0.91), (-0.31, 0.77), (-0.06, 0.81)]
-    verts = [(x, -0.040, z) for x, z in outline] + [(x, 0.040, z) for x, z in outline]
-    count = len(outline)
-    faces = [tuple(range(count)), tuple(range(count, count * 2))[::-1]]
-    for index in range(count):
-        next_index = (index + 1) % count
-        faces.append((index, next_index, count + next_index, count + index))
-    mesh = bpy.data.meshes.new("StandardWoodcutterAxeHeadMesh")
-    mesh.from_pydata(verts, [], faces)
-    mesh.update()
-    head = bpy.data.objects.new("Axe_ForgedWedgeHead", mesh)
-    bpy.context.collection.objects.link(head)
-    head.data.materials.append(STEEL)
-    apply_bevel(head, 0.012, 3)
-    parts.append(head)
-    # Two polished edge strips approximate a traditional slightly convex cutting bit.
-    parts.append(bar_between("Axe_EdgeUpper", (-0.31, 0, 1.04), (-0.43, 0, 0.91), 0.012, 0.047, EDGE))
-    parts.append(bar_between("Axe_EdgeLower", (-0.43, 0, 0.91), (-0.31, 0, 0.77), 0.012, 0.047, EDGE))
-    parts.append(cube("Axe_FlatPoll", (0.125, 0, 0.93), (0.055, 0.052, 0.082), IRON, 0.012))
+    # A recognizable professional felling axe: slim hickory haft, restrained poll,
+    # forged cheek, flared convex bit, and a clean polished cutting band.
+    handle_points = [(0.014, 0, 0.035), (-0.006, 0, 0.20), (-0.020, 0, 0.42),
+                     (0.002, 0, 0.64), (0, 0, 0.88)]
+    parts = [curved_handle("Axe_SlimHickoryHaft", handle_points, 0.027, WOOD)]
+
+    def profile_prism(name, outline, half_depth, mat, bevel):
+        vertices = [(x, -half_depth, z) for x, z in outline] + [(x, half_depth, z) for x, z in outline]
+        count = len(outline)
+        faces = [tuple(range(count)), tuple(range(count, count * 2))[::-1]]
+        for index in range(count):
+            next_index = (index + 1) % count
+            faces.append((index, next_index, count + next_index, count + index))
+        mesh = bpy.data.meshes.new(f"{name}Mesh")
+        mesh.from_pydata(vertices, [], faces)
+        mesh.update()
+        obj = bpy.data.objects.new(name, mesh)
+        bpy.context.collection.objects.link(obj)
+        obj.data.materials.append(mat)
+        apply_bevel(obj, bevel, 3)
+        return obj
+
+    blade_outline = [(-0.025, 0.755), (-0.025, 0.925), (-0.19, 0.97), (-0.34, 0.94),
+                     (-0.405, 0.895), (-0.405, 0.715), (-0.34, 0.67), (-0.19, 0.695)]
+    parts.append(profile_prism("Axe_FlaredForgedBlade", blade_outline, 0.034, STEEL, 0.007))
+    parts.append(cube("Axe_CompactEye", (0.025, 0, 0.84), (0.105, 0.046, 0.087), STEEL, 0.012))
+    parts.append(bar_between("Axe_BrightCuttingEdge", (-0.405, 0, 0.71), (-0.405, 0, 0.90), 0.012, 0.050, EDGE))
+    parts.append(cube("Axe_CompactPoll", (0.145, 0, 0.84), (0.045, 0.048, 0.065), IRON, 0.008))
     return join_weapon(parts, "SM_Bram_WoodcutterAxe")
 
 
