@@ -1328,7 +1328,7 @@ spawnGoblinBand = () => {
       return;
     }
     if (bram.position.distanceTo(blacksmithSpot) < 3) openTownInterior("STARFALL BLACKSMITH", "The Ember Anvil", "The forge is hot and ready for future weapon upgrades.");
-    else if (bram.position.distanceTo(shopSpot) < 3) openTownInterior("STARFALL SHOP", "The Wayfarer Store", "Supplies and new stock will be available here soon.");
+    else if (bram.position.distanceTo(shopSpot) < 3) openTownInterior("STARFALL SHOP", "The Wayfarer Store", "Trade your gold for crafting materials and rare tools.");
     else if (bram.position.distanceTo(returnSpot) < 3) leaveTeleporterTown();
   });
   const cobbleMaterials = [mat("#716d62"), mat("#827b6c"), mat("#5d625b"), mat("#917f69")], cobbleStreet = new T.Group();
@@ -1549,14 +1549,15 @@ setTimeout(() => {
   const baseRenderInventory = renderInventory;
   renderInventory = () => {
     baseRenderInventory();
-    const icons = { Hammer: "🔨", "Goblin Bone": "🦴", "Orc Tusk": "🦷", "Teleporter Key": "🗝️" };
+    const icons = { Hammer: "🔨", "Goblin Bone": "🦴", "Orc Tusk": "🦷", "Teleporter Key": "🗝️", "Strange Rune": "✦", "Key to the Man Cave": "🔑" };
+    const descriptions = { "Strange Rune": "A strange item that locals say has the power to awaken the strange altar.", "Key to the Man Cave": "A key made for the mysterious Man Cave." };
     [weaponList, materialList, keyItemList].forEach((list) => list.querySelectorAll("li:not(.empty-item)").forEach((item) => {
       const name = item.firstChild.textContent, amount = item.querySelector("span")?.textContent || "", icon = document.createElement("span"), count = document.createElement("span");
       icon.className = "item-icon";
       icon.textContent = icons[name] || "✦";
       count.className = "item-amount";
       count.textContent = amount;
-      item.dataset.tooltip = `${name}${amount ? ` — ${amount}` : ""}`;
+      item.dataset.tooltip = descriptions[name] || `${name}${amount ? ` — ${amount}` : ""}`;
       item.setAttribute("aria-label", item.dataset.tooltip);
       item.replaceChildren(icon, count);
     }));
@@ -1574,7 +1575,7 @@ setTimeout(() => {
     }
   } catch {
   }
-  const blacksmithMenu = $("#blacksmithMenu"), shopMenu = $("#shopMenu"), upgradeTab = $("#upgradeTab"), craftTab = $("#craftTab"), upgradePage = $("#upgradePage"), craftPage = $("#craftPage"), smithStatus = $("#smithStatus"), craftAxe = $("#craftAxe"), craftOrcClub = $("#craftOrcClub"), equippedCard = $("#equippedWeaponCard"), townInterior = $("#townInterior"), townInteriorTitle = $("#townInteriorTitle"), actionPrompt = $("#actionPrompt"), heroStats = document.querySelectorAll(".hero-stats dd");
+  const blacksmithMenu = $("#blacksmithMenu"), shopMenu = $("#shopMenu"), upgradeTab = $("#upgradeTab"), craftTab = $("#craftTab"), upgradePage = $("#upgradePage"), craftPage = $("#craftPage"), smithStatus = $("#smithStatus"), craftAxe = $("#craftAxe"), craftOrcClub = $("#craftOrcClub"), equippedCard = $("#equippedWeaponCard"), townInterior = $("#townInterior"), townInteriorTitle = $("#townInteriorTitle"), actionPrompt = $("#actionPrompt"), heroStats = document.querySelectorAll(".hero-stats dd"), shopMaterialsTab = $("#shopMaterialsTab"), shopToolsTab = $("#shopToolsTab"), shopMaterialsPage = $("#shopMaterialsPage"), shopToolsPage = $("#shopToolsPage"), shopGold = $("#shopGold"), shopStatus = $("#shopStatus"), buyWood = $("#buyWood"), buyGoblinBone = $("#buyGoblinBone"), buyOrcTusk = $("#buyOrcTusk"), buyStrangeRune = $("#buyStrangeRune"), buyManCaveKey = $("#buyManCaveKey");
   function saveEquipment() {
     localStorage.setItem(equipmentKey, JSON.stringify(equipment));
     writePermanentSave();
@@ -1664,6 +1665,60 @@ setTimeout(() => {
   }
   upgradeTab.onclick = () => showSmithPage(false);
   craftTab.onclick = () => showSmithPage(true);
+  function showShopPage(tools) {
+    shopMaterialsTab.classList.toggle("active", !tools);
+    shopToolsTab.classList.toggle("active", tools);
+    shopMaterialsPage.hidden = tools;
+    shopToolsPage.hidden = !tools;
+    shopStatus.textContent = "";
+  }
+  function updateShopUI() {
+    shopGold.textContent = bramGold.toLocaleString();
+    buyWood.disabled = bramGold < 10;
+    buyGoblinBone.disabled = bramGold < 40;
+    buyOrcTusk.disabled = bramGold < 500;
+    const ownsRune = inventory.keyItems.includes("Strange Rune");
+    const ownsManCaveKey = inventory.keyItems.includes("Key to the Man Cave");
+    buyStrangeRune.disabled = ownsRune || bramGold < 1;
+    buyManCaveKey.disabled = ownsManCaveKey || bramGold < 1000;
+    buyStrangeRune.textContent = ownsRune ? "Owned" : "Buy · 1 Gold";
+    buyManCaveKey.textContent = ownsManCaveKey ? "Owned" : "Buy · 1,000 Gold";
+  }
+  function buyMaterial(name, price) {
+    if (bramGold < price) {
+      shopStatus.textContent = "You do not have enough gold.";
+      return;
+    }
+    bramGold -= price;
+    addMaterial(name);
+    updateRewards();
+    writePermanentSave();
+    updateShopUI();
+    shopStatus.textContent = `Purchased 1 ${name}.`;
+  }
+  function buyTool(name, price) {
+    if (inventory.keyItems.includes(name)) {
+      shopStatus.textContent = `${name} is already owned.`;
+      return;
+    }
+    if (bramGold < price) {
+      shopStatus.textContent = "You do not have enough gold.";
+      return;
+    }
+    bramGold -= price;
+    addKeyItem(name);
+    updateRewards();
+    writePermanentSave();
+    updateShopUI();
+    shopStatus.textContent = `Purchased ${name}.`;
+  }
+  shopMaterialsTab.onclick = () => showShopPage(false);
+  shopToolsTab.onclick = () => showShopPage(true);
+  buyWood.onclick = () => buyMaterial("Wood", 10);
+  buyGoblinBone.onclick = () => buyMaterial("Goblin Bone", 40);
+  buyOrcTusk.onclick = () => buyMaterial("Orc Tusk", 500);
+  buyStrangeRune.onclick = () => buyTool("Strange Rune", 1);
+  buyManCaveKey.onclick = () => buyTool("Key to the Man Cave", 1000);
   setInterval(() => {
     if (townInterior.hidden) {
       blacksmithMenu.hidden = shopMenu.hidden = true;
@@ -1673,6 +1728,7 @@ setTimeout(() => {
     blacksmithMenu.hidden = !smith;
     shopMenu.hidden = smith;
     updateWeaponUI();
+    if (!smith) updateShopUI();
   }, 120);
   let lastWeaponAttack = 0;
   slam = () => {
