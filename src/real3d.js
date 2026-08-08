@@ -65,12 +65,14 @@ for (let i = 0; i < 32; i++) {
   tr.castShadow = le.castShadow = true;
   g.add(tr, le);
   g.position.set(Math.cos(a) * d, 0, Math.sin(a) * d);
+  g.userData.solidRadius = 0.48;
   world.add(g);
 }
 for (const [x, z, h] of [[-13, -8, 4], [11, -11, 5], [-14, 9, 3], [13, 10, 6]]) {
   const m = new T.Mesh(new T.CylinderGeometry(0.8, 1.1, h, 9), mat("#62635a"));
   m.position.set(x, h / 2, z);
   m.castShadow = true;
+  m.userData.solidRadius = 1.05;
   world.add(m);
 }
 function tex(kind) {
@@ -685,6 +687,7 @@ for (const [x, y, s2] of [[-1.55, 1.6, [0.55, 3.4, 0.65]], [1.55, 1.6, [0.55, 3.
   const part = new T.Mesh(new T.BoxGeometry(...s2), gateStone);
   part.position.set(x, y, -14.58);
   part.castShadow = true;
+  if (x) part.userData.solidBox = { halfX: 0.46, halfZ: 0.52 };
   caveRim.add(part);
 }
 world.add(caveRim);
@@ -737,6 +740,7 @@ function knightSprite() {
 }
 const caveKnight = knightSprite();
 caveKnight.position.copy(knight.position);
+caveKnight.userData.solidRadius = 0.72;
 world.add(caveKnight);
 const teleporter = new T.Group(), portalMat = new T.MeshBasicMaterial({ color: "#7ae7ff", transparent: true, opacity: 0.78 }), portalRing = new T.Mesh(new T.TorusGeometry(1.15, 0.16, 10, 32), portalMat), portalCore = new T.Mesh(new T.CircleGeometry(0.94, 32), new T.MeshBasicMaterial({ color: "#3557df", transparent: true, opacity: 0.6 }));
 portalRing.rotation.x = portalCore.rotation.x = -Math.PI / 2;
@@ -1242,6 +1246,7 @@ spawnGoblinBand = () => {
     door.position.set(0, 0.95, 2.11);
     building.add(base, top, door);
     building.position.set(x, 0, z);
+    building.userData.solidBox = { halfX: 2.7, halfZ: 2.3 };
     building.traverse((object) => {
       if (object.isMesh) object.castShadow = true;
     });
@@ -1254,6 +1259,7 @@ spawnGoblinBand = () => {
   altarBase2.position.y = 0.35;
   altarStone2.position.y = 1.5;
   altarFlame2.position.y = 2.95;
+  altarBase2.userData.solidRadius = 2.35;
   teleporterTown.add(altarBase2, altarStone2, altarFlame2);
   const townReturnPortal = new T.Mesh(new T.TorusGeometry(1.2, 0.16, 10, 32), new T.MeshBasicMaterial({ color: "#7ae7ff" }));
   townReturnPortal.rotation.x = -Math.PI / 2;
@@ -1406,6 +1412,7 @@ spawnGoblinBand = () => {
     const post = new T.Mesh(new T.CylinderGeometry(0.1, 0.14, 3.2, 8), mat("#37291f")), lampGlow = new T.Mesh(new T.SphereGeometry(0.24, 12, 8), windowMat);
     post.position.set(x, 1.6, z);
     lampGlow.position.set(x, 3.25, z);
+    post.userData.solidRadius = 0.28;
     teleporterTown.add(post, lampGlow);
   }
   for (const [x, z] of [[-3, 2], [3, -4], [-8, -1], [8, 7]]) {
@@ -1413,6 +1420,7 @@ spawnGoblinBand = () => {
     crate.position.set(x, 0.38, z);
     crate.rotation.y = (x + z) * 0.18;
     crate.castShadow = true;
+    crate.userData.solidRadius = 0.62;
     teleporterTown.add(crate);
   }
   const townMist = new T.Mesh(new T.PlaneGeometry(40, 8), new T.MeshBasicMaterial({ color: "#d6c5a8", transparent: true, opacity: 0.055, depthWrite: false }));
@@ -1446,6 +1454,7 @@ spawnGoblinBand = () => {
     bench.add(seat, legA, legB);
     bench.position.set(x, 0, z);
     bench.rotation.y = ry;
+    bench.userData.solidRadius = 1.65;
     town.add(bench);
   }
   const market = new T.Group(), marketTop = new T.Mesh(new T.BoxGeometry(5, 0.16, 3), canvasMat);
@@ -1463,18 +1472,21 @@ spawnGoblinBand = () => {
     market.add(sack);
   }
   market.position.set(-10, 0, -9);
+  market.userData.solidRadius = 2.75;
   town.add(market);
   for (const [x, z] of [[-14, 12], [14, 12], [-14, -12], [14, -12]]) {
     const post = new T.Mesh(new T.CylinderGeometry(0.11, 0.16, 4.2, 10), iron), glowMat = new T.MeshStandardMaterial({ color: "#f5b867", emissive: "#d67a2d", emissiveIntensity: 2 }), glow = new T.Mesh(new T.SphereGeometry(0.3, 12, 8), glowMat), light = new T.PointLight("#ffb765", 3.4, 10, 2);
     post.position.set(x, 2.1, z);
     glow.position.set(x, 3.75, z);
     light.position.copy(glow.position);
+    post.userData.solidRadius = 0.3;
     town.add(post, glow, light);
   }
   for (const [x, z] of [[-12, 4], [12, 5], [-10, -13], [9, -12]]) {
     const barrel = new T.Mesh(new T.CylinderGeometry(0.48, 0.52, 1.05, 14), mat("#64462f"));
     barrel.position.set(x, 0.53, z);
     barrel.castShadow = true;
+    barrel.userData.solidRadius = 0.62;
     town.add(barrel);
   }
 })();
@@ -1762,6 +1774,7 @@ setTimeout(() => {
     tree.add(trunk, crownA, crownB);
     tree.position.set(x, 0, z);
     tree.userData.ready = true;
+    tree.userData.solidRadius = 0.62;
     world.add(tree);
     harvestTrees.push(tree);
   }
@@ -2317,3 +2330,58 @@ window.addEventListener("keydown", (event) => {
   if (event.key.toLowerCase() === "e") useTeleporter();
 });
 renderInventory();
+
+// Solid-world collision. Decorative grass, flowers, puddles, and path pebbles
+// remain walkable, while every substantial prop tagged above blocks Bram.
+const movementBeforeWorldCollision = move, bramCollisionRadius = 0.42;
+let solidWorldObjects = [];
+function refreshSolidWorldObjects() {
+  solidWorldObjects = [];
+  world.traverse((object) => {
+    if (object.userData.solidRadius || object.userData.solidBox) solidWorldObjects.push(object);
+  });
+}
+refreshSolidWorldObjects();
+setInterval(refreshSolidWorldObjects, 500);
+function objectIsVisible(object) {
+  for (let current = object; current; current = current.parent) {
+    if (!current.visible) return false;
+  }
+  return true;
+}
+function worldCollisionScore(position) {
+  let score = 0;
+  if (loc.textContent === "Starfall Town") {
+    const localX = position.x - 100, localZ = position.z - 100, wallLimit = 15.95;
+    score += Math.max(0, Math.abs(localX) - wallLimit);
+    score += Math.max(0, Math.abs(localZ) - wallLimit);
+  } else if (loc.textContent === "Meadow of Cinders") {
+    score += Math.max(0, Math.hypot(position.x, position.z) - 14.8);
+  }
+  solidWorldObjects.forEach((object) => {
+    if (!objectIsVisible(object) || object === bram) return;
+    const radius = Number(object.userData.solidRadius || 0), box = object.userData.solidBox;
+    if (!radius && !box) return;
+    const center = object.getWorldPosition(new T.Vector3());
+    if (radius) {
+      score += Math.max(0, radius + bramCollisionRadius - Math.hypot(position.x - center.x, position.z - center.z));
+    } else {
+      const overlapX = Number(box.halfX) + bramCollisionRadius - Math.abs(position.x - center.x);
+      const overlapZ = Number(box.halfZ) + bramCollisionRadius - Math.abs(position.z - center.z);
+      if (overlapX > 0 && overlapZ > 0) score += Math.min(overlapX, overlapZ);
+    }
+  });
+  return score;
+}
+move = (d) => {
+  const before = bram.position.clone(), beforeScore = worldCollisionScore(before);
+  movementBeforeWorldCollision(d);
+  if (state !== "world") return;
+  const desired = bram.position.clone(), desiredScore = worldCollisionScore(desired);
+  if (desiredScore <= 1e-4 || desiredScore < beforeScore - 1e-4) return;
+  const xOnly = new T.Vector3(desired.x, before.y, before.z), zOnly = new T.Vector3(before.x, before.y, desired.z), xScore = worldCollisionScore(xOnly), zScore = worldCollisionScore(zOnly);
+  if (xScore <= 1e-4 || xScore < beforeScore - 1e-4) bram.position.copy(xOnly);
+  else if (zScore <= 1e-4 || zScore < beforeScore - 1e-4) bram.position.copy(zOnly);
+  else bram.position.copy(before);
+  follow(bram.position);
+};
