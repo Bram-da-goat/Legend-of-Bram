@@ -1,6 +1,22 @@
 const { app, BrowserWindow, Menu } = require('electron');
+const fs = require('fs');
 const path = require('path');
 let mainWindow;
+
+// Keep Chromium storage in one permanent location so reinstalling, moving the
+// application, or changing the package version cannot create a fresh profile.
+// Existing players are migrated from the original package-name folder once.
+const legacyUserData = app.getPath('userData');
+const stableUserData = path.join(app.getPath('appData'), 'The Legend of Bram');
+try {
+  if (legacyUserData !== stableUserData && fs.existsSync(legacyUserData) && !fs.existsSync(stableUserData)) {
+    fs.cpSync(legacyUserData, stableUserData, { recursive: true });
+  }
+  fs.mkdirSync(stableUserData, { recursive: true });
+  app.setPath('userData', stableUserData);
+} catch (error) {
+  console.error('Could not initialize the permanent save folder:', error);
+}
 
 function createWindow() {
   mainWindow = new BrowserWindow({

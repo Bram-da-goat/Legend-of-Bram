@@ -514,6 +514,11 @@ loadGameButton.onclick = () => {
   saveJourney();
 };
 setInterval(saveJourney, 2500);
+window.addEventListener("pagehide", saveJourney);
+window.addEventListener("beforeunload", saveJourney);
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "hidden") saveJourney();
+});
 showSaveStatus();
 let bramXp = 0, bramGold = 0;
 const xpLabel = document.querySelector("#xp"), goldLabel = document.querySelector("#gold");
