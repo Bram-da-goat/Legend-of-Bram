@@ -2042,11 +2042,79 @@ setTimeout(() => {
   renderInventory();
 }, 240);
 setTimeout(() => {
-  const originalBramTexture = tex("bram");
-  originalBramTexture.colorSpace = T.SRGBColorSpace;
+  const originalBramTextures = {};
+  function originalBramTexture(weapon) {
+    if (originalBramTextures[weapon]) return originalBramTextures[weapon];
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = 32;
+    const paint = canvas.getContext("2d");
+    paint.imageSmoothingEnabled = false;
+
+    // Bram's exact original launch colors and compact silhouette.
+    paint.fillStyle = "#2b392e";
+    paint.fillRect(8, 17, 16, 10);
+    paint.fillStyle = "#587d63";
+    paint.fillRect(9, 12, 14, 11);
+    paint.fillStyle = "#f1ca9e";
+    paint.fillRect(11, 5, 10, 9);
+
+    if (weapon === "Woodcutter Axe") {
+      paint.fillStyle = "#6e4327";
+      paint.fillRect(24, 11, 4, 18);
+      paint.fillStyle = "#535d5b";
+      paint.fillRect(19, 6, 12, 7);
+      paint.fillStyle = "#b7c0bc";
+      paint.fillRect(18, 7, 3, 5);
+      paint.fillRect(20, 12, 2, 2);
+    } else if (weapon === "Orc War Club") {
+      // Original pixel-art club: tapered head, iron bands, upper and lower
+      // spikes, wrapped handle, and a pointed pommel.
+      paint.fillStyle = "#643817";
+      paint.fillRect(25, 12, 4, 17);
+      paint.fillStyle = "#272b29";
+      paint.fillRect(24, 18, 6, 2);
+      paint.fillRect(24, 24, 6, 2);
+      paint.fillStyle = "#7e4720";
+      paint.fillRect(21, 5, 11, 7);
+      paint.fillRect(22, 3, 9, 2);
+      paint.fillRect(23, 12, 7, 2);
+      paint.fillStyle = "#343837";
+      paint.fillRect(21, 7, 11, 2);
+      paint.fillRect(22, 11, 9, 2);
+      paint.fillStyle = "#aeb7b4";
+      paint.fillRect(19, 6, 2, 2);
+      paint.fillRect(18, 10, 4, 2);
+      paint.fillRect(31, 5, 1, 2);
+      paint.fillRect(31, 9, 1, 2);
+      paint.fillRect(23, 1, 2, 3);
+      paint.fillRect(28, 1, 2, 3);
+      paint.fillRect(22, 13, 2, 2);
+      paint.fillRect(29, 13, 2, 2);
+      paint.fillRect(26, 29, 2, 2);
+    } else {
+      // Original hammer pixels from Bram's launch sprite.
+      paint.fillStyle = "#63452c";
+      paint.fillRect(24, 10, 4, 18);
+      paint.fillStyle = "#4d5452";
+      paint.fillRect(18, 4, 13, 8);
+      paint.fillStyle = "#8d9690";
+      paint.fillRect(19, 5, 11, 3);
+      paint.fillStyle = "#343a3a";
+      paint.fillRect(18, 11, 13, 2);
+    }
+    const texture = new T.CanvasTexture(canvas);
+    texture.magFilter = T.NearestFilter;
+    texture.minFilter = T.NearestFilter;
+    texture.colorSpace = T.SRGBColorSpace;
+    originalBramTextures[weapon] = texture;
+    return texture;
+  }
+  const currentBramWeapon = () => document.querySelector(".hero-stats dd")?.textContent || "Hammer";
   const applyOriginalBram = () => {
-    bram.material.map = originalBramTexture;
+    const weapon = currentBramWeapon();
+    bram.material.map = originalBramTexture(weapon);
     bram.material.needsUpdate = true;
+    bram.userData.equippedWeapon = weapon;
     bram.scale.set(1.8, 1.8, 1);
   };
   const renderWithOriginalBram = renderInventory;
