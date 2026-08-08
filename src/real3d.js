@@ -1,4 +1,36 @@
 import * as T from "three";
+const permanentSaveKeys = [
+  "emberfall-bram-save-v1",
+  "legend-of-bram-rewards-v1",
+  "legend-of-bram-inventory-v1",
+  "legend-of-bram-equipment-v1"
+];
+const permanentSave = window.bramSave?.load?.();
+if (permanentSave?.entries) {
+  let localSaveTime = 0;
+  for (const key of permanentSaveKeys) {
+    try {
+      localSaveTime = Math.max(localSaveTime, JSON.parse(localStorage.getItem(key))?.savedAt || 0);
+    } catch {
+    }
+  }
+  const restoreWholeSnapshot = Number(permanentSave.savedAt || 0) > localSaveTime;
+  for (const key of permanentSaveKeys) {
+    const savedValue = permanentSave.entries[key];
+    if (typeof savedValue === "string" && (restoreWholeSnapshot || localStorage.getItem(key) === null)) {
+      localStorage.setItem(key, savedValue);
+    }
+  }
+}
+function writePermanentSave() {
+  if (!window.bramSave?.write) return;
+  const entries = {};
+  for (const key of permanentSaveKeys) {
+    const value = localStorage.getItem(key);
+    if (value !== null) entries[key] = value;
+  }
+  window.bramSave.write({ version: 1, savedAt: Date.now(), entries });
+}
 const c = document.querySelector("#gameCanvas"), r = new T.WebGLRenderer({ canvas: c, antialias: true });
 r.setPixelRatio(Math.min(devicePixelRatio, 2));
 r.shadowMap.enabled = true;
@@ -453,6 +485,7 @@ function saveJourney() {
   if (!startScreen.classList.contains("hidden")) return;
   saveRewards();
   localStorage.setItem(saveKey, JSON.stringify({ x: bram.position.x, z: bram.position.z, exp: bramXp, gold: bramGold, goblinsKilled, cinderHollow, bossDefeated, savedAt: Date.now() }));
+  writePermanentSave();
 }
 function showSaveStatus() {
   const raw = localStorage.getItem(saveKey);
@@ -1544,6 +1577,7 @@ setTimeout(() => {
   const blacksmithMenu = $("#blacksmithMenu"), shopMenu = $("#shopMenu"), upgradeTab = $("#upgradeTab"), craftTab = $("#craftTab"), upgradePage = $("#upgradePage"), craftPage = $("#craftPage"), smithStatus = $("#smithStatus"), craftAxe = $("#craftAxe"), craftOrcClub = $("#craftOrcClub"), equippedCard = $("#equippedWeaponCard"), townInterior = $("#townInterior"), townInteriorTitle = $("#townInteriorTitle"), actionPrompt = $("#actionPrompt"), heroStats = document.querySelectorAll(".hero-stats dd");
   function saveEquipment() {
     localStorage.setItem(equipmentKey, JSON.stringify(equipment));
+    writePermanentSave();
   }
   function materialCount(name) {
     return Number(inventory.materials[name] || 0);
@@ -2138,6 +2172,7 @@ try {
 }
 function saveInventory() {
   localStorage.setItem(inventoryKey, JSON.stringify(inventory));
+  writePermanentSave();
 }
 function inventoryRows(list, items) {
   list.replaceChildren();
