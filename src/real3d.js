@@ -2050,12 +2050,12 @@ setTimeout(() => {
     const paint = canvas.getContext("2d");
     paint.imageSmoothingEnabled = false;
 
-    // Bram's exact original launch colors and compact silhouette.
-    paint.fillStyle = "#2b392e";
+    // Bram's alternate charcoal, sage, and warm-skin palette on the compact silhouette.
+    paint.fillStyle = "#27372d";
     paint.fillRect(8, 17, 16, 10);
-    paint.fillStyle = "#587d63";
+    paint.fillStyle = "#52765d";
     paint.fillRect(9, 12, 14, 11);
-    paint.fillStyle = "#f1ca9e";
+    paint.fillStyle = "#efc698";
     paint.fillRect(11, 5, 10, 9);
 
     if (weapon === "Woodcutter Axe") {
