@@ -1237,7 +1237,28 @@ spawnGoblinBand = () => {
   const teleporterTown = new T.Group();
   teleporterTown.position.set(100, 0, 100);
   teleporterTown.visible = false;
-  teleporterTown.add(ground(42, "#6a6254"));
+  const starfallLandscape = ground(220, "#596455"), starfallCourtyard = ground(42, "#6a6254");
+  starfallLandscape.position.y = -0.06;
+  starfallCourtyard.position.y = 0.01;
+  teleporterTown.add(starfallLandscape, starfallCourtyard);
+  const distantTerrain = new T.Group();
+  for (let i = 0; i < 44; i++) {
+    const angle = i * 2.39996, radius = 27 + i * 23 % 58, height = 4 + i % 5 * 1.35, hill = new T.Mesh(new T.ConeGeometry(4.5 + i % 4 * 1.2, height, 9), mat(i % 3 ? "#4d5b4c" : "#596252"));
+    hill.position.set(Math.cos(angle) * radius, height / 2 - 0.05, Math.sin(angle) * radius);
+    hill.rotation.y = i * 0.63;
+    hill.castShadow = hill.receiveShadow = true;
+    distantTerrain.add(hill);
+  }
+  for (let i = 0; i < 70; i++) {
+    const angle = i * 2.618, radius = 22 + i * 31 % 68, tree = new T.Group(), trunk = new T.Mesh(new T.CylinderGeometry(0.12, 0.2, 1.7, 7), mat("#433325")), crown = new T.Mesh(new T.ConeGeometry(0.78 + i % 3 * 0.16, 2.5, 8), mat(i % 2 ? "#344f3b" : "#3b5940"));
+    trunk.position.y = 0.85;
+    crown.position.y = 2.35;
+    trunk.castShadow = crown.castShadow = true;
+    tree.add(trunk, crown);
+    tree.position.set(Math.cos(angle) * radius, 0, Math.sin(angle) * radius);
+    distantTerrain.add(tree);
+  }
+  teleporterTown.add(distantTerrain);
   function townBuilding2(x, z, wall, roof) {
     const building = new T.Group(), base = new T.Mesh(new T.BoxGeometry(5, 3.2, 4.2), mat(wall)), top = new T.Mesh(new T.ConeGeometry(3.8, 2, 4), mat(roof)), door = new T.Mesh(new T.PlaneGeometry(1.05, 1.8), new T.MeshBasicMaterial({ color: "#241a15" }));
     base.position.y = 1.6;
@@ -1439,7 +1460,7 @@ spawnGoblinBand = () => {
       wall.castShadow = wall.receiveShadow = true;
       town.add(wall);
     }
-    if (Math.abs(i) > 3) for (const side of [-17, 17]) {
+    for (const side of [-17, 17]) {
       const wall = new T.Mesh(new T.BoxGeometry(0.65, 1.15, 1.05), i % 3 ? cutStone : mortar);
       wall.position.set(side, 0.58, i);
       wall.castShadow = wall.receiveShadow = true;
