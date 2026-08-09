@@ -95,12 +95,30 @@ export function createRock(scale = 1) {
 }
 
 export function createKnight() {
-  const root=createBram();
-  root.traverse(object=>{if(object.isMesh){object.material=object.material.clone();if(object.material.color)object.material.color.multiply(new THREE.Color('#aeb9c6'));}});
-  const cape=mesh(new THREE.PlaneGeometry(1.15,1.7),standard('#5c2030',.88),root,[0,1.42,-.34]);cape.rotation.x=.08;
-  const plume=mesh(new THREE.ConeGeometry(.13,.65,7),standard('#7c2941'),root,[0,2.92,-.02]);plume.rotation.z=-.18;
-  const aura=new THREE.PointLight('#a9c9ff',.35,5);aura.position.y=2;root.add(aura);
-  root.userData.npc='Sir Calder';root.userData.radius=.68;return root;
+  const root=new THREE.Group(), visual=new THREE.Group();root.add(visual);
+  const plate=standard('#78858b',.28,.82), trim=standard('#313b40',.3,.76), cloth=standard('#581f2d',.9), leather=standard('#35271f',.88);
+  const leftLeg=new THREE.Group(),rightLeg=new THREE.Group();leftLeg.position.set(-.25,.84,0);rightLeg.position.set(.25,.84,0);visual.add(leftLeg,rightLeg);
+  for(const leg of [leftLeg,rightLeg]){mesh(new THREE.CapsuleGeometry(.15,.58,5,9),trim,leg,[0,-.34,0]);mesh(new THREE.BoxGeometry(.36,.22,.64),plate,leg,[0,-.73,.12]);}
+  const torso=mesh(new THREE.CapsuleGeometry(.54,.84,7,12),plate,visual,[0,1.58,0]);torso.scale.z=.78;
+  mesh(new THREE.BoxGeometry(1.08,.18,.62),trim,visual,[0,1.18,0]);
+  for(const y of [1.42,1.72,2.02])mesh(new THREE.BoxGeometry(.94,.2,.14),trim,visual,[0,y,.48]);
+  const leftArm=new THREE.Group(),rightArm=new THREE.Group();leftArm.position.set(-.66,1.9,0);rightArm.position.set(.66,1.9,0);visual.add(leftArm,rightArm);
+  for(const arm of [leftArm,rightArm]){mesh(new THREE.SphereGeometry(.23,12,9),plate,arm);mesh(new THREE.CapsuleGeometry(.13,.62,5,8),trim,arm,[0,-.36,0]);}
+  const helmet=mesh(new THREE.SphereGeometry(.43,16,12),plate,visual,[0,2.5,0]);helmet.scale.set(.92,1.08,.96);
+  mesh(new THREE.BoxGeometry(.72,.22,.17),trim,visual,[0,2.48,.39]);
+  for(const x of [-.2,0,.2])mesh(new THREE.BoxGeometry(.08,.06,.05),standard('#10181b',.5,.2),visual,[x,2.48,.49]);
+  const neckGuard=mesh(new THREE.CylinderGeometry(.46,.56,.34,12),trim,visual,[0,2.18,0]);neckGuard.scale.z=.82;
+  const cape=mesh(new THREE.PlaneGeometry(1.28,1.95),cloth,visual,[0,1.45,-.44]);cape.rotation.x=.08;
+  const plume=mesh(new THREE.ConeGeometry(.16,.78,8),cloth,visual,[0,3.04,-.04]);plume.rotation.z=-.2;
+  const sword=new THREE.Group();sword.position.set(.04,-.72,.02);rightArm.add(sword);
+  const grip=mesh(new THREE.CylinderGeometry(.045,.05,.55,8),leather,sword,[0,-.18,0]);grip.rotation.z=-.16;
+  const guard=mesh(new THREE.BoxGeometry(.58,.09,.13),standard('#a79562',.34,.72),sword,[.08,-.47,0]);guard.rotation.z=-.16;
+  const blade=mesh(new THREE.ConeGeometry(.13,1.32,4),plate,sword,[.28,-1.06,0]);blade.rotation.z=-.16;
+  const shield=new THREE.Group();shield.position.set(-.04,-.42,.22);leftArm.add(shield);
+  const shieldFace=mesh(new THREE.CylinderGeometry(.5,.5,.13,8),plate,shield,[0,-.3,.16]);shieldFace.rotation.x=Math.PI/2;shieldFace.scale.y=1.18;
+  mesh(new THREE.CylinderGeometry(.14,.14,.18,10),standard('#a79562',.32,.75),shield,[0,-.3,.25]).rotation.x=Math.PI/2;
+  const aura=new THREE.PointLight('#a9c9ff',.32,5);aura.position.y=2;root.add(aura);
+  root.userData.rig={visual,leftLeg,rightLeg,leftArm,rightArm};root.userData.npc='Sir Calder';root.userData.radius=.72;return root;
 }
 
 export function createVillager(kind='merchant') {
