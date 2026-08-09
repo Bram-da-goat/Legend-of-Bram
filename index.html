@@ -3,104 +3,32 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Emberfall</title>
+    <meta name="theme-color" content="#071016" />
+    <title>The Legend of Bram V2</title>
     <link rel="stylesheet" href="/style.css" />
   </head>
   <body>
-    <main class="game-shell">
-      <header>
-        <div><h1>The Legend of Bram</h1></div>
-        <div class="hud" aria-live="polite">
-          <div><span>Location</span><strong id="location">Meadow of Cinders</strong></div>
-          <div><span>State</span><strong id="state">Explore</strong></div>
-          <div><span>EXP</span><strong id="xp">0</strong></div>
-          <div><span>Gold</span><strong id="gold">0</strong></div>
-          <strong id="lives" hidden>10</strong>
-        </div>
+    <main id="game">
+      <canvas id="world" aria-label="The Legend of Bram V2 game world"></canvas>
+      <div class="vignette"></div>
+      <header class="hud top-hud">
+        <section class="brand"><span>THE LEGEND OF</span><strong>BRAM <i>V2</i></strong></section>
+        <section class="objective"><span>ACTIVE QUEST</span><strong id="objective">Recover the fallen Star Shards</strong><small id="progress">0 / 3 recovered</small></section>
       </header>
-
-      <section class="game-frame">
-        <section id="startScreen" class="start-screen" aria-label="Emberfall start menu">
-          <p class="eyebrow">A HIGH FANTASY ADVENTURE</p>
-          <h2>The Legend of Bram</h2>
-          <p>Cross the highlands, survive the goblin bands, and defend the old gate.</p>
-          <div class="start-actions"><button id="newGame" type="button">New Game</button><button id="loadGame" type="button" class="secondary">Load Game</button></div>
-          <small id="saveStatus">No saved journey yet.</small>
-        </section>
-        <canvas id="gameCanvas" aria-label="3D game world"></canvas>
-        <div id="message" class="message">Walk Bram into the red patrol marker.</div>
-        <section id="bossBar" class="boss-bar" hidden><strong id="bossName">Knight</strong><div><i id="bossFill"></i></div></section>
-        <aside id="npcDialogue" class="npc-dialogue" hidden></aside>
-        <aside class="party-panel" aria-label="Party roster">
-          <p class="eyebrow">YOUR PARTY</p>
-          <article class="hero-slot active">
-            <div class="hero-token">B</div>
-            <div><h2>Bram</h2><p>Stoneguard</p></div>
-            <span class="active-tag">LEADER</span>
-          </article>
-          <dl class="hero-stats"><div><dt>Weapon</dt><dd>Hammer</dd></div><div><dt>Attack</dt><dd>65 damage · 4.8 range</dd></div></dl>
-          <label class="targeting-control" for="targeting"><span>Targeting</span><select id="targeting"><option value="first" selected>First</option><option value="last">Last</option><option value="strong">Strong</option></select></label>
-          <div class="empty-slots">
-            <div class="hero-slot empty"><span>+</span><div><strong>Hero Slot 2</strong><small>Coming soon</small></div></div>
-            <div class="hero-slot empty"><span>+</span><div><strong>Hero Slot 3</strong><small>Coming soon</small></div></div>
-            <div class="hero-slot empty"><span>+</span><div><strong>Hero Slot 4</strong><small>Coming soon</small></div></div>
-          </div>
-          <button id="inventoryButton" class="secondary inventory-button" type="button">Inventory</button>
-        </aside>
-        <aside id="inventoryPanel" class="inventory-panel" aria-label="Inventory" hidden>
-          <div class="inventory-heading"><div><p class="eyebrow">BRAM'S PACK</p><h2>Inventory</h2></div><button id="closeInventory" class="inventory-close" type="button" aria-label="Close inventory">×</button></div>
-          <input id="inventoryWeapons" class="inventory-page-toggle" type="radio" name="inventoryPage" checked><input id="inventoryMaterials" class="inventory-page-toggle" type="radio" name="inventoryPage"><input id="inventoryKeys" class="inventory-page-toggle" type="radio" name="inventoryPage">
-          <nav class="inventory-tabs" aria-label="Inventory pages"><label for="inventoryWeapons">Weapons</label><label for="inventoryMaterials">Materials</label><label for="inventoryKeys">Key Items</label></nav>
-          <div class="inventory-pages">
-            <section id="weaponsPage" class="inventory-section"><h3>Weapons</h3><ul id="weaponList"></ul></section>
-            <section id="materialsPage" class="inventory-section"><h3>Materials</h3><ul id="materialList"></ul></section>
-            <section id="keyItemsPage" class="inventory-section"><h3>Key Items</h3><ul id="keyItemList"></ul></section>
-          </div>
-        </aside>
-        <aside id="townInterior" class="town-interior" hidden>
-          <header class="service-header"><div><p class="eyebrow" id="townInteriorType">TOWN</p><h2 id="townInteriorTitle">Town Building</h2></div><button id="leaveTownInterior" type="button" class="secondary">Close</button></header>
-          <p id="townInteriorText" class="service-intro"></p>
-          <section id="blacksmithMenu" class="service-menu" hidden>
-            <nav class="smith-tabs"><button id="upgradeTab" class="active" type="button">Upgrade Weapon</button><button id="craftTab" type="button">Craft Weapon</button></nav>
-            <section id="upgradePage" class="smith-page"><div class="service-portrait smith-portrait">⚒</div><div><p class="eyebrow">MASTER SMITH ROWAN</p><h3>Weapon Upgrades</h3><p>Improve the weapons you already own. More upgrades will arrive in the next release.</p><div id="equippedWeaponCard" class="upgrade-card"></div></div></section>
-            <section id="craftPage" class="smith-page craft-grid" hidden>
-              <article class="craft-card"><div class="craft-icon">🪓</div><div><p class="eyebrow">HARVESTING TOOL</p><h3>Woodcutter Axe</h3><p>Equip it and press E near a tree to chop it down. Each tree yields 1 Wood, then grows back.</p><strong>5 Goblin Bones</strong></div><button id="craftAxe" type="button">Craft Axe</button></article>
-              <article class="craft-card legendary"><div class="craft-icon">🪵</div><div><p class="eyebrow">HEAVY AOE WEAPON</p><h3>Orc War Club</h3><p>A brutal, slow-firing club. Its ground smash deals 200 damage in a 6-range area.</p><strong>25 Goblin Bones · 10 Orc Tusks</strong></div><button id="craftOrcClub" type="button">Craft Club</button></article>
-            </section>
-            <p id="smithStatus" class="service-status" aria-live="polite"></p>
-          </section>
-          <section id="shopMenu" class="service-menu shop-menu" hidden>
-            <div class="shop-title-row"><div><p class="eyebrow">WAYFARER PROVISIONS</p><h3>Village Shop</h3></div><div class="shop-wallet"><span>BRAM'S GOLD</span><strong><span id="shopGold">0</span> Gold</strong></div></div>
-            <nav class="smith-tabs shop-tabs"><button id="shopMaterialsTab" class="active" type="button">Materials</button><button id="shopToolsTab" type="button">Tools</button></nav>
-            <section id="shopMaterialsPage" class="shop-page">
-              <article class="shop-card"><div class="shop-item-icon">🪵</div><div><h4>Wood</h4><p>One sturdy log for crafting.</p></div><button id="buyWood" type="button">Buy · 10 Gold</button></article>
-              <article class="shop-card"><div class="shop-item-icon">🦴</div><div><h4>Goblin Bone</h4><p>A common monster-crafting material.</p></div><button id="buyGoblinBone" type="button">Buy · 40 Gold</button></article>
-              <article class="shop-card rare"><div class="shop-item-icon">🦷</div><div><h4>Orc Tusk</h4><p>A rare material taken from powerful orcs.</p></div><button id="buyOrcTusk" type="button">Buy · 500 Gold</button></article>
-            </section>
-            <section id="shopToolsPage" class="shop-page" hidden>
-              <article class="shop-card strange"><div class="shop-item-icon">✦</div><div><h4>Strange Rune</h4><p>A strange item that locals say has the power to awaken the strange altar.</p></div><button id="buyStrangeRune" type="button">Buy · 1 Gold</button></article>
-              <article class="shop-card legendary"><div class="shop-item-icon">🔑</div><div><h4>Key to the Man Cave</h4><p>An unusual key made for a door known only as the Man Cave.</p></div><button id="buyManCaveKey" type="button">Buy · 1,000 Gold</button></article>
-            </section>
-            <p id="shopStatus" class="service-status" aria-live="polite"></p>
-          </section>
-        </aside>
-        <style>
-          .inventory-section ul{grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:14px}.inventory-section li:not(.empty-item){position:relative;display:grid;place-items:center;min-height:112px;padding:12px;border-color:#55747a;background:linear-gradient(145deg,#1b4149,#102a31);cursor:default}.inventory-section li:not(.empty-item)::after{content:attr(data-tooltip);position:absolute;z-index:2;left:50%;bottom:calc(100% + 9px);width:max-content;max-width:220px;padding:7px 10px;border:1px solid #d0ad65;border-radius:6px;background:#08171c;color:#fff3cf;font-size:.75rem;line-height:1.25;text-align:center;opacity:0;pointer-events:none;transform:translate(-50%,4px);transition:opacity .14s,transform .14s}.inventory-section li:not(.empty-item):hover::after{opacity:1;transform:translate(-50%,0)}.inventory-section li .item-icon{font-size:2.65rem;filter:drop-shadow(0 4px 3px #0008)}.inventory-section li .item-icon.sledge-icon{position:relative;width:57px;height:57px;filter:drop-shadow(0 4px 3px #0008);transform:rotate(-38deg)}.inventory-section li .sledge-icon::before{content:'';position:absolute;left:26px;top:13px;width:8px;height:48px;border:1px solid #3f2819;border-radius:5px;background:linear-gradient(90deg,#6e4327,#bd8152,#6e4327)}.inventory-section li .sledge-icon::after{content:'';position:absolute;left:5px;top:3px;width:50px;height:20px;border:2px solid #343b3b;border-radius:4px;background:linear-gradient(#b8c1bd 0 25%,#687370 27% 76%,#414a49 78%)}.inventory-section li .item-amount{position:absolute;right:8px;bottom:7px;color:#f4c768;font-size:.78rem;font-weight:800}.inventory-section li.empty-item{grid-column:1/-1}
-          .town-interior{position:absolute;z-index:8;left:50%;top:50%;width:min(470px,88%);padding:30px;border:1px solid #d0ad65;border-radius:16px;background:linear-gradient(145deg,#1a3035f7,#0d1b20f7);box-shadow:0 20px 60px #000b;color:#fff3cf;text-align:center;transform:translate(-50%,-50%)}.town-interior h2{font-size:2rem}.town-interior p:not(.eyebrow){margin:12px auto 22px;max-width:340px;color:#c9d7cf;line-height:1.55}
-          .teleporter-prompt{position:absolute;z-index:5;left:50%;bottom:62px;padding:10px 15px;border:1px solid #74dff0;border-radius:10px;background:#0b2430eb;color:#dcfbff;font-size:.8rem;font-weight:700;box-shadow:0 5px 18px #0008;transform:translateX(-50%);white-space:nowrap}.teleporter-prompt[hidden]{display:none}
-          .game-frame.teleporter-near .message{display:none!important}
-          .item-toast{position:absolute;z-index:30;left:22px;bottom:22px;min-width:190px;padding:13px 18px;border:1px solid #d4ae62;border-radius:10px;background:linear-gradient(135deg,#172b2df2,#0b171af2);box-shadow:0 10px 34px #000b;color:#ffe3a1;font-size:.9rem;font-weight:900;letter-spacing:.03em;opacity:1;transform:translateY(0);transition:opacity .22s,transform .22s}.item-toast[hidden]{display:none}.item-toast.leaving{opacity:0;transform:translateY(10px)}
-          .inventory-section li .weapon-image{width:76px;height:76px;object-fit:contain;filter:drop-shadow(0 6px 5px #0009)}
-          .town-interior{inset:0!important;left:0!important;top:0!important;width:auto!important;padding:clamp(24px,4vw,64px)!important;border:0!important;border-radius:0!important;background:radial-gradient(circle at 74% 20%,#6a3b1e99,transparent 28%),linear-gradient(120deg,#111b1df8,#271b17f8)!important;text-align:left!important;transform:none!important;overflow:auto}.town-interior[hidden]{display:none}.service-header{display:flex;align-items:flex-start;justify-content:space-between;padding-bottom:20px;border-bottom:1px solid #9a7b50}.service-header h2{margin:4px 0;font-size:clamp(2.25rem,5vw,4.5rem);color:#fff3cf}.service-header button{min-width:110px}.town-interior .service-intro{max-width:760px!important;margin:18px 0 30px!important;font-size:1.05rem}.service-menu{min-height:440px}.smith-tabs{display:flex;gap:10px;margin:0 0 24px}.smith-tabs button{padding:13px 22px;background:#172a2c;border-color:#685a42}.smith-tabs button.active{color:#171510;background:linear-gradient(#f0cb83,#b88642);box-shadow:0 0 24px #e7a85444}.smith-page{display:grid;grid-template-columns:minmax(180px,28%) 1fr;gap:clamp(24px,5vw,70px);align-items:center;min-height:310px;padding:28px;border:1px solid #644b32;border-radius:18px;background:linear-gradient(135deg,#38251cb8,#111b1dd9);box-shadow:inset 0 1px #ffffff12,0 22px 70px #0008}.smith-page[hidden],.service-menu[hidden]{display:none}.service-portrait{display:grid;place-items:center;min-height:260px;border:1px solid #94744b;border-radius:14px;background:radial-gradient(circle,#e6a85433,#100e0c);font-size:7rem;text-shadow:0 8px 20px #000}.smith-page h3,.shop-menu h3{margin:5px 0 10px;font-size:2rem;color:#fff3cf}.smith-page p,.shop-menu p{color:#c9d7cf;line-height:1.6}.upgrade-card{margin-top:22px;padding:18px;border-left:4px solid #e2ae55;background:#0c1718aa;color:#f5d999}.craft-grid{grid-template-columns:repeat(2,minmax(0,1fr));align-items:stretch}.craft-card{display:grid;grid-template-columns:90px 1fr;gap:18px;padding:24px;border:1px solid #69543c;border-radius:12px;background:#132124dd}.craft-card.legendary{border-color:#8e6b36;background:linear-gradient(145deg,#302619,#152325)}.craft-icon{display:grid;place-items:center;width:80px;height:80px;border-radius:50%;background:#081214;font-size:3.4rem}.craft-card button{grid-column:1/-1;margin-top:auto}.craft-card button:disabled{opacity:.45;cursor:not-allowed}.service-status{min-height:24px;margin:18px 0!important;color:#f2c86f!important;font-weight:800}.shop-menu{display:grid;grid-template-columns:minmax(220px,32%) 1fr;gap:50px;align-items:center;padding:30px;border:1px solid #644b32;border-radius:18px;background:linear-gradient(135deg,#253c38dd,#11191bdd)}.shop-shelves{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:28px}.shop-shelves span{padding:24px 14px;border:1px solid #6d5d43;border-radius:8px;background:#172527;color:#d8c497;text-align:center}.action-prompt{position:absolute;z-index:6;left:50%;bottom:62px;padding:10px 15px;border:1px solid #d5ad5a;border-radius:10px;background:#191d19eb;color:#fff1c7;font-size:.8rem;font-weight:800;transform:translateX(-50%);white-space:nowrap}.action-prompt[hidden]{display:none}@media(max-width:760px){.craft-grid,.smith-page,.shop-menu{grid-template-columns:1fr}.service-portrait{min-height:130px}.craft-card{grid-template-columns:70px 1fr}.shop-shelves{grid-template-columns:1fr}}
-          .shop-menu{display:block!important;padding:30px!important}.shop-menu[hidden],.shop-page[hidden]{display:none!important}.shop-title-row{display:flex;align-items:end;justify-content:space-between;gap:24px;margin-bottom:20px}.shop-wallet{display:flex;flex-direction:column;align-items:flex-end;padding:12px 18px;border:1px solid #9c7848;border-radius:10px;background:#0b1719cc}.shop-wallet>span{color:#b8c9c3;font-size:.72rem;font-weight:800;letter-spacing:.12em}.shop-wallet strong{color:#f4c768;font-size:1.25rem}.shop-page{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}.shop-card{display:grid;grid-template-columns:72px 1fr;gap:16px;min-height:190px;padding:22px;border:1px solid #5f654d;border-radius:12px;background:linear-gradient(145deg,#1c302ddd,#101b1ddd);box-shadow:inset 0 1px #ffffff10}.shop-card.rare{border-color:#786747}.shop-card.strange{border-color:#76629a;background:linear-gradient(145deg,#2a2440dd,#111b1ddd)}.shop-card.legendary{border-color:#a07a38;background:linear-gradient(145deg,#352816dd,#111b1ddd)}.shop-item-icon{display:grid;place-items:center;width:64px;height:64px;border-radius:12px;background:#081416;font-size:2.8rem;filter:drop-shadow(0 5px 5px #0008)}.shop-card h4{margin:2px 0 6px;color:#fff3cf;font-size:1.25rem}.shop-card p{margin:0!important;font-size:.9rem}.shop-card button{grid-column:1/-1;align-self:end;margin-top:10px}.shop-card button:disabled{opacity:.45;cursor:not-allowed}@media(max-width:900px){.shop-page{grid-template-columns:1fr 1fr}}@media(max-width:620px){.shop-page{grid-template-columns:1fr}.shop-title-row{align-items:flex-start;flex-direction:column}.shop-wallet{align-items:flex-start}}
-        </style>
-        <aside id="teleporterPrompt" class="teleporter-prompt" hidden></aside>
-        <aside id="actionPrompt" class="action-prompt" hidden></aside>
-        <aside id="itemToast" class="item-toast" role="status" aria-live="polite" hidden></aside>
-        <section id="controls" class="controls"><button id="startWave" hidden>Start wave</button><button id="returnWorld" hidden class="secondary">Return to world</button></section>
-        <p id="help" class="help">Move: WASD / arrows · E interacts</p>
+      <aside class="hud player-card">
+        <div class="portrait">B</div>
+        <div><span>STONEGUARD</span><strong>Bram</strong><div class="health"><i id="healthFill"></i></div><small><b id="healthText">100</b> / 100</small></div>
+      </aside>
+      <aside class="hud shard-card"><span>STAR SHARDS</span><strong id="shards">0</strong><small>Awaken the ancient altar</small></aside>
+      <div id="prompt" class="prompt" hidden></div>
+      <div id="toast" class="toast" hidden></div>
+      <section id="titleScreen" class="screen title-screen">
+        <div class="title-copy"><p>A NEW JOURNEY BEGINS</p><h1>The Legend<br><span>of Bram</span></h1><h2>V2 · STARFALL</h2><p class="lede">Explore the Moonfall Wilds, break the corruption, and awaken the altar beneath the falling stars.</p><div class="title-actions"><button id="newGame">Begin Journey</button><button id="continueGame" class="secondary">Continue</button></div><small>WASD to move · Space to strike · E to interact</small></div>
       </section>
+      <section id="deathScreen" class="screen modal" hidden><div><p>THE WILDS CLAIM ANOTHER</p><h2>Bram has fallen</h2><button id="retry">Return to the Moonwell</button></div></section>
+      <section id="victoryScreen" class="screen modal" hidden><div><p>THE ALTAR AWAKENS</p><h2>Starfall answers Bram</h2><p>The first chapter of V2 is complete.</p><button id="keepExploring">Keep Exploring</button></div></section>
+      <footer class="controls"><span><b>WASD</b> Move</span><span><b>SPACE</b> Hammer</span><span><b>E</b> Interact</span></footer>
     </main>
-    <script type="module" src="/src/real3d.js"></script>
+    <script type="module" src="/src/main.js"></script>
   </body>
 </html>
