@@ -41,13 +41,15 @@ export function createBram() {
   mesh(new THREE.CapsuleGeometry(.12, .55, 5, 8), cloth, rightArm, [0, -.3, 0]);
   mesh(new THREE.SphereGeometry(.15, 10, 8), armor, leftArm, [0, 0, 0]);
   mesh(new THREE.SphereGeometry(.15, 10, 8), armor, rightArm, [0, 0, 0]);
+  const leftHand=mesh(new THREE.SphereGeometry(.13,12,9),skin,leftArm,[0,-.64,.02]);
+  const rightHand=mesh(new THREE.SphereGeometry(.13,12,9),skin,rightArm,[0,-.64,.02]);
   const hammer = new THREE.Group(); hammer.position.set(.03, -.62, .06); rightArm.add(hammer);
   const handle = mesh(new THREE.CylinderGeometry(.055, .065, 1.45, 10), leather, hammer, [0, 0, 0]);
   handle.rotation.z = .04;
   const hammerHead = mesh(new THREE.BoxGeometry(.78, .33, .38), armor, hammer, [.03, .72, 0]);
   hammerHead.geometry.translate(0, 0, 0);
   for (const x of [-.47, .53]) mesh(new THREE.CylinderGeometry(.22, .17, .18, 10), darkMetal, hammer, [x, .72, 0]).rotation.z = Math.PI / 2;
-  root.userData.rig = { visual, leftLeg, rightLeg, leftArm, rightArm, hammer };
+  root.userData.rig = { visual, leftLeg, rightLeg, leftArm, rightArm, leftHand, rightHand, hammer };
   root.userData.radius = .58;
   return root;
 }
