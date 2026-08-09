@@ -25,3 +25,16 @@
   color: #fff0dc;
   font: 600 .88rem/1.45 Cinzel;
 }
+
+.battle-controls {
+  display: flex;
+  gap: 7px;
+  pointer-events: auto;
+}
+
+.battle-controls button {
+  min-width: 92px;
+  padding: 9px 11px;
+  font-size: .56rem;
+  white-space: nowrap;
+}
