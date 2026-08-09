@@ -41,12 +41,12 @@ export function createBram() {
   mesh(new THREE.CapsuleGeometry(.12, .55, 5, 8), cloth, rightArm, [0, -.3, 0]);
   mesh(new THREE.SphereGeometry(.15, 10, 8), armor, leftArm, [0, 0, 0]);
   mesh(new THREE.SphereGeometry(.15, 10, 8), armor, rightArm, [0, 0, 0]);
-  const hammer = new THREE.Group(); hammer.position.set(0, -.62, 0); rightArm.add(hammer);
-  const handle = mesh(new THREE.CylinderGeometry(.055, .065, 1.45, 10), leather, hammer, [0, -.5, 0]);
-  handle.rotation.z = .12;
-  const hammerHead = mesh(new THREE.BoxGeometry(.78, .33, .38), armor, hammer, [.07, -1.19, 0]);
+  const hammer = new THREE.Group(); hammer.position.set(.03, -.62, .06); rightArm.add(hammer);
+  const handle = mesh(new THREE.CylinderGeometry(.055, .065, 1.45, 10), leather, hammer, [0, 0, 0]);
+  handle.rotation.z = .04;
+  const hammerHead = mesh(new THREE.BoxGeometry(.78, .33, .38), armor, hammer, [.03, .72, 0]);
   hammerHead.geometry.translate(0, 0, 0);
-  for (const x of [-.43, .57]) mesh(new THREE.CylinderGeometry(.22, .17, .18, 10), darkMetal, hammer, [x, -1.19, 0]).rotation.z = Math.PI / 2;
+  for (const x of [-.47, .53]) mesh(new THREE.CylinderGeometry(.22, .17, .18, 10), darkMetal, hammer, [x, .72, 0]).rotation.z = Math.PI / 2;
   root.userData.rig = { visual, leftLeg, rightLeg, leftArm, rightArm, hammer };
   root.userData.radius = .58;
   return root;
