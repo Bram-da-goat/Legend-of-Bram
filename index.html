@@ -1,34 +1,20 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#071016" />
-    <title>The Legend of Bram V2</title>
-    <link rel="stylesheet" href="/style.css" />
-  </head>
-  <body>
-    <main id="game">
-      <canvas id="world" aria-label="The Legend of Bram V2 game world"></canvas>
-      <div class="vignette"></div>
-      <header class="hud top-hud">
-        <section class="brand"><span>THE LEGEND OF</span><strong>BRAM <i>V2</i></strong></section>
-        <section class="objective"><span>ACTIVE QUEST</span><strong id="objective">Recover the fallen Star Shards</strong><small id="progress">0 / 3 recovered</small></section>
-      </header>
-      <aside class="hud player-card">
-        <div class="portrait">B</div>
-        <div><span>STONEGUARD</span><strong>Bram</strong><div class="health"><i id="healthFill"></i></div><small><b id="healthText">100</b> / 100</small></div>
-      </aside>
-      <aside class="hud shard-card"><span>STAR SHARDS</span><strong id="shards">0</strong><small>Awaken the ancient altar</small></aside>
-      <div id="prompt" class="prompt" hidden></div>
-      <div id="toast" class="toast" hidden></div>
-      <section id="titleScreen" class="screen title-screen">
-        <div class="title-copy"><p>A NEW JOURNEY BEGINS</p><h1>The Legend<br><span>of Bram</span></h1><h2>V2 · STARFALL</h2><p class="lede">Explore the Moonfall Wilds, break the corruption, and awaken the altar beneath the falling stars.</p><div class="title-actions"><button id="newGame">Begin Journey</button><button id="continueGame" class="secondary">Continue</button></div><small>WASD to move · Space to strike · E to interact</small></div>
-      </section>
-      <section id="deathScreen" class="screen modal" hidden><div><p>THE WILDS CLAIM ANOTHER</p><h2>Bram has fallen</h2><button id="retry">Return to the Moonwell</button></div></section>
-      <section id="victoryScreen" class="screen modal" hidden><div><p>THE ALTAR AWAKENS</p><h2>Starfall answers Bram</h2><p>The first chapter of V2 is complete.</p><button id="keepExploring">Keep Exploring</button></div></section>
-      <footer class="controls"><span><b>WASD</b> Move</span><span><b>SPACE</b> Hammer</span><span><b>E</b> Interact</span></footer>
-    </main>
-    <script type="module" src="/src/main.js"></script>
-  </body>
-</html>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#05090c"><title>The Legend of Bram V3</title><link rel="stylesheet" href="/style.css"></head>
+<body>
+<main id="game">
+  <canvas id="world" aria-label="The Legend of Bram V3"></canvas><div class="vignette"></div>
+  <header class="hud topbar"><div class="brand"><small>THE LEGEND OF</small><strong>BRAM <i>V3</i></strong></div><div class="location"><small>REGION</small><strong id="location">Meadow of Cinders</strong></div><div class="resources"><span><b id="exp">0</b> EXP</span><span><b id="gold">0</b> GOLD</span><button id="inventoryButton" class="icon-button">PACK</button></div></header>
+  <aside class="hud hero-card"><div class="portrait">B</div><div><small>STONEGUARD</small><strong>Bram</strong><p>Hammer · 65 DMG · 4.8 RNG</p></div></aside>
+  <aside class="hud quest-tracker"><small>ACTIVE QUEST</small><strong id="questTitle">A Stranger in the Meadow</strong><p id="questText">Find the knight at the old altar.</p><div class="quest-progress"><i id="questFill"></i></div><span id="questCount">0 / 1</span></aside>
+  <section id="battleHud" class="hud battle-hud" hidden><div><small id="battleLabel">PREPARATION</small><strong id="battleTimer">15</strong></div><p id="battleObjective">Place Bram away from the pebble path.</p><label>Target<select id="targeting"><option value="first">First</option><option value="strong">Strong</option><option value="last">Last</option></select></label></section>
+  <div id="bossBar" class="boss-bar" hidden><small id="bossName">THE FALLEN KNIGHT</small><div><i id="bossFill"></i></div><span id="bossHp">200 / 200</span></div>
+  <div id="tutorial" class="tutorial" hidden><small>TUTORIAL</small><strong id="tutorialTitle">Movement</strong><p id="tutorialText">Use WASD or the arrow keys to move Bram.</p></div>
+  <div id="prompt" class="prompt" hidden></div><div id="toast" class="toast" hidden></div>
+  <aside id="inventory" class="panel inventory" hidden><header><div><small>BRAM'S PACK</small><h2>Inventory</h2></div><button data-close="inventory">×</button></header><nav><button class="tab active" data-tab="weapons">Weapons</button><button class="tab" data-tab="materials">Materials</button><button class="tab" data-tab="keys">Key Items</button></nav><div id="inventoryGrid" class="inventory-grid"></div></aside>
+  <aside id="serviceMenu" class="panel service" hidden><header><div><small id="serviceType">STARFALL TOWN</small><h2 id="serviceTitle">Village Service</h2></div><button data-close="serviceMenu">×</button></header><div id="serviceContent"></div></aside>
+  <section id="cinematic" class="cinematic" hidden><div class="letterbox top"></div><div class="letterbox bottom"></div><button id="skipCutscene" class="skip">Skip</button><article><small id="speaker">NARRATOR</small><p id="dialogue">Beyond the ash-covered mountains, a lone guardian returns.</p><button id="nextDialogue">Continue</button></article></section>
+  <section id="titleScreen" class="screen title-screen"><div class="title-copy"><p>AN OLD LEGEND · REFORGED</p><h1>The Legend<br><span>of Bram</span></h1><h2>V3 · THE ASHEN OATH</h2><p class="lede">A story-driven tower-defense RPG rebuilt with cinematic visuals, persistent quests, and the complete Meadow of Cinders adventure.</p><div><button id="newGame">New Game</button><button id="continueGame" class="secondary">Continue</button></div><small>WASD move · E interact · Click to place Bram in battle</small></div></section>
+  <section id="ending" class="screen ending" hidden><div><small>CHAPTER ONE COMPLETE</small><h2>The road beyond Starfall opens</h2><p>Bram has broken the necromancer's hold and restored the town's ancient path.</p><button id="continueExploring">Continue Exploring</button></div></section>
+</main><script type="module" src="/src/main.js"></script>
+</body></html>

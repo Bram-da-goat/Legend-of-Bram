@@ -1,18 +1,32 @@
-# The Legend of Bram V2
+# The Legend of Bram V3 — The Ashen Oath
 
-V2 is a browser-first Three.js action RPG rebuilt from a clean foundation.
+V3 restores the original V1 structure on a modern browser-first Three.js foundation.
 
-## Current vertical slice
+## Complete V3 vertical slice
 
-- Explore the shader-driven Moonfall Wilds as Bram.
-- Fight corrupted goblins with Bram's animated hammer shockwave.
-- Recover three Star Shards and awaken the central altar.
-- Save progress automatically in the browser.
-- Run locally with Vite and build as a static website.
+- Explore the Meadow of Cinders as Bram.
+- Follow a guided movement, interaction, encounter, placement, and targeting tutorial.
+- Meet Sir Calder and accept his goblin-hunting oath.
+- Collide with roaming goblin bands to enter tower-defense battles.
+- Place Bram off one of three randomized pebble paths during preparation.
+- Fight goblins, orc-led bands, 100 undead minions, Calder, and his regenerating necromancer form.
+- Experience story cutscenes for the opening, knight quest, first encounter, betrayal, transformation, victory, and town arrival.
+- Earn persistent EXP, gold, materials, weapons, and key items.
+- Unlock the meadow teleporter and enter Starfall Town.
+- Meet Mira the blacksmith and Oren the merchant.
+- Use the full-screen inventory, blacksmith, and shop interfaces.
+- Autosave the complete quest, economy, inventory, boss, location, and encounter state in the browser.
 
-## Next milestones
+## Controls
 
-1. Expand melee combat with enemy tells, dodge, and equipment stats.
-2. Add the party-placement tower-defense encounter mode.
-3. Add Starfall Town, vendors, crafting, and quests on the V2 architecture.
-4. Add authored GLTF characters, animation blending, audio, and controller support.
+- WASD / arrow keys: move Bram
+- E: interact
+- I or Pack button: inventory
+- Mouse click: place Bram during battle preparation
+
+## Future chapters
+
+1. Controller support and authored GLTF animation sets.
+2. Party recruitment and four-hero placement.
+3. More regions, quests, enemy families, and weapon upgrades.
+4. Audio, voice acting, cinematics, and accessibility settings.

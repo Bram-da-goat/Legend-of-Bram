@@ -29,13 +29,15 @@ export function createTerrainMaterial() {
       uniform vec3 uLightDirection; uniform float uTime; varying vec3 vWorld; varying vec3 vNormalW; varying float vHeight;
       float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
       void main(){
-        float n=hash(floor(vWorld.xz*1.7));
-        vec3 moss=mix(vec3(.105,.22,.16),vec3(.24,.34,.19),n);
+        float broad=.5+.25*sin(vWorld.x*.31)+.18*cos(vWorld.z*.27)+.1*sin((vWorld.x+vWorld.z)*.61);
+        float fine=.5+.5*sin(vWorld.x*2.7+sin(vWorld.z*1.9))*cos(vWorld.z*2.3);
+        float n=clamp(broad+fine*.12,0.,1.);
+        vec3 moss=mix(vec3(.095,.205,.145),vec3(.245,.335,.185),n);
         vec3 earth=vec3(.24,.19,.125); vec3 stone=vec3(.29,.32,.29);
         float path=smoothstep(3.2,1.1,abs(vWorld.x+sin(vWorld.z*.13)*3.));
         float slope=1.-max(dot(normalize(vNormalW),vec3(0,1,0)),0.);
         vec3 color=mix(moss,earth,path*.72); color=mix(color,stone,smoothstep(.24,.62,slope));
-        float light=.32+.78*max(dot(normalize(vNormalW),uLightDirection),0.); color*=light; color+=vec3(.03,.05,.035)*smoothstep(-1.3,.7,vHeight);
+        float light=.32+.78*max(dot(normalize(vNormalW),uLightDirection),0.);float cloud=.92+.08*sin(vWorld.x*.075+uTime*.045)*sin(vWorld.z*.063-uTime*.032);color*=light*cloud;color+=vec3(.03,.05,.035)*smoothstep(-1.3,.7,vHeight);
         gl_FragColor=vec4(color,1.);
         #include <fog_fragment>
       }`,

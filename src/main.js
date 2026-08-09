@@ -4,204 +4,141 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { createTerrainMaterial, createWaterMaterial, createSkyMaterial, terrainHeight } from './shaders.js';
-import { createBram, createGoblin, createAltar, createTree, createRock } from './models.js';
+import { createBram, createGoblin, createOrc, createKnight, createVillager, createAltar, createTree, createRock, createPortal, createBuilding } from './models.js';
 
-const $ = (selector) => document.querySelector(selector);
-const canvas = $('#world');
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 1.75));
-renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-renderer.outputColorSpace = THREE.SRGBColorSpace;
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.08;
+const $=selector=>document.querySelector(selector),canvas=$('#world');
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.04;
+const scene=new THREE.Scene();scene.fog=new THREE.FogExp2('#162326',.017);
+const camera=new THREE.PerspectiveCamera(47,1,.1,260),composer=new EffectComposer(renderer);composer.addPass(new RenderPass(scene,camera));const bloom=new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),.38,.62,.8);composer.addPass(bloom);composer.addPass(new OutputPass());
+const sky=new THREE.Mesh(new THREE.SphereGeometry(180,36,22),createSkyMaterial()),sun=new THREE.DirectionalLight('#ffd5a4',4.4),hemi=new THREE.HemisphereLight('#c4e1e0','#172018',1.65);sun.position.set(-30,46,-25);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=sun.shadow.camera.bottom=-48;sun.shadow.camera.right=sun.shadow.camera.top=48;sun.shadow.camera.near=4;sun.shadow.camera.far=120;sun.shadow.bias=-.0002;scene.add(sky,sun,hemi);
+const overworld=new THREE.Group(),battleWorld=new THREE.Group(),townWorld=new THREE.Group();scene.add(overworld,battleWorld,townWorld);battleWorld.visible=townWorld.visible=false;
+const terrainMaterial=createTerrainMaterial(),waterMaterial=createWaterMaterial();
+function terrainMesh(size=126,segments=160){const geometry=new THREE.PlaneGeometry(size,size,segments,segments);geometry.rotateX(-Math.PI/2);const mesh=new THREE.Mesh(geometry,terrainMaterial);mesh.receiveShadow=true;return mesh;}
+overworld.add(terrainMesh());townWorld.add(terrainMesh(96,120));
+const battleGround=new THREE.Mesh(new THREE.PlaneGeometry(46,46,1,1),new THREE.MeshStandardMaterial({color:'#263f2f',roughness:.96}));battleGround.rotation.x=-Math.PI/2;battleGround.receiveShadow=true;battleWorld.add(battleGround);
+const rng=(()=>{let seed=93471;return()=>((seed=seed*16807%2147483647)-1)/2147483646})();
+const worldColliders=[],townColliders=[];
+function place(group,object,x,z,colliders=worldColliders,radius=object.userData.radius||0){object.position.set(x,terrainHeight(x,z),z);object.rotation.y=rng()*Math.PI*2;group.add(object);if(radius)colliders.push({object,radius});return object;}
+for(let i=0;i<66;i++){const a=rng()*Math.PI*2,r=11+rng()*47,x=Math.cos(a)*r,z=Math.sin(a)*r;if(Math.hypot(x,z)<8||Math.hypot(x,z+11)<6)continue;place(overworld,createTree(.7+rng()*.7,rng()>.84),x,z);}
+for(let i=0;i<46;i++){const a=rng()*6.283,r=8+rng()*48,x=Math.cos(a)*r,z=Math.sin(a)*r;if(Math.hypot(x,z)<6)continue;place(overworld,createRock(.24+rng()*.75),x,z);}
+const grassGeo=new THREE.ConeGeometry(.05,.5,4),grassMat=new THREE.MeshStandardMaterial({color:'#31583a',roughness:1}),grass=new THREE.InstancedMesh(grassGeo,grassMat,1100),dummy=new THREE.Object3D();for(let i=0;i<1100;i++){const x=(rng()-.5)*115,z=(rng()-.5)*115;dummy.position.set(x,terrainHeight(x,z)+.23,z);dummy.rotation.y=rng()*6;dummy.scale.set(.6+rng(),.55+rng(),.6+rng());dummy.updateMatrix();grass.setMatrixAt(i,dummy.matrix);}overworld.add(grass);
+const lakeGeo=new THREE.CircleGeometry(8,64);lakeGeo.rotateX(-Math.PI/2);const lake=new THREE.Mesh(lakeGeo,waterMaterial);lake.position.set(-22,-.38,-14);overworld.add(lake);
+const ruinMat=new THREE.MeshStandardMaterial({color:'#48514e',roughness:.85,metalness:.06});function solid(geometry,material=ruinMat){const m=new THREE.Mesh(geometry,material);m.castShadow=m.receiveShadow=true;return m;}
+for(const [x,z,rot] of [[18,-19,.4],[-20,21,-.6],[27,16,1.4]]){const ruin=new THREE.Group(),l=solid(new THREE.BoxGeometry(1.2,4.5,1.15)),r=l.clone(),cap=solid(new THREE.BoxGeometry(5.2,1,1.2));l.position.set(-2,2.25,0);r.position.set(2,2.25,0);cap.position.set(0,4.5,0);ruin.add(l,r,cap);ruin.position.set(x,terrainHeight(x,z),z);ruin.rotation.y=rot;overworld.add(ruin);worldColliders.push({object:ruin,radius:2.6});}
+for(let i=0;i<28;i++){const a=i/28*Math.PI*2,r=61+(i%4)*2.8,h=13+(i%5)*2.2,mountain=solid(new THREE.ConeGeometry(7+(i%3)*1.4,h,9),new THREE.MeshStandardMaterial({color:i%2?'#394743':'#46504a',roughness:.98}));mountain.position.set(Math.cos(a)*r,h/2-1,Math.sin(a)*r);mountain.rotation.y=i*.57;overworld.add(mountain);}
+for(const [x,z,s] of [[-21,-18,1.2],[20,-19,1.35],[-21,18,1.05],[21,19,1.2]]){const tree=createTree(s);tree.position.set(x,0,z);battleWorld.add(tree);const rock=createRock(.8);rock.position.set(x+(x>0?-2:2),0,z+(z>0?-2:2));battleWorld.add(rock);}
+const player=createBram();overworld.add(player);const playerRig=player.userData.rig;
+const knight=createKnight();place(overworld,knight,0,-9,worldColliders,.8);
+const portal=createPortal();portal.position.set(0,terrainHeight(0,7),7);overworld.add(portal);worldColliders.push({object:portal,radius:1.8});
+const oldAltar=createAltar();oldAltar.scale.setScalar(.78);oldAltar.position.set(0,terrainHeight(0,-12),-12);overworld.add(oldAltar);worldColliders.push({object:oldAltar,radius:1.8});
 
-const scene = new THREE.Scene();
-scene.fog = new THREE.FogExp2('#132327', .018);
-const camera = new THREE.PerspectiveCamera(48, 1, .1, 240);
-const composer = new EffectComposer(renderer);
-composer.addPass(new RenderPass(scene, camera));
-const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), .42, .62, .82);
-composer.addPass(bloom);
-composer.addPass(new OutputPass());
+// Starfall Town: continuous walls, cobbled square, shops, altar, and named NPCs.
+const cobbleMat=[new THREE.MeshStandardMaterial({color:'#665f52',roughness:.9}),new THREE.MeshStandardMaterial({color:'#807565',roughness:.88}),new THREE.MeshStandardMaterial({color:'#535b57',roughness:.92})];
+for(let row=-29;row<=29;row++)for(let col=-17;col<=17;col++){const stone=solid(new THREE.BoxGeometry(.55,.08,.42),cobbleMat[Math.abs(row*5+col*3)%3]);stone.position.set(col*.58+(row%2)*.23,terrainHeight(col*.58,row*.48)+.04,row*.48);stone.rotation.y=(row+col)*.035;townWorld.add(stone);}
+const smithBuilding=place(townWorld,createBuilding('smith','#745342','#473f3d'),-8,-2,townColliders),shopBuilding=place(townWorld,createBuilding('shop','#586c62','#354c52'),8,-2,townColliders),hallBuilding=place(townWorld,createBuilding('hall','#695e4e','#464345'),0,-13,townColliders);
+const townAltar=place(townWorld,createAltar(),0,3,townColliders);const mira=place(townWorld,createVillager('smith'),-8,2,townColliders,.65),oren=place(townWorld,createVillager('merchant'),8,2,townColliders,.65),returnPortal=place(townWorld,createPortal(),0,13,townColliders,1.8);returnPortal.userData.active=true;returnPortal.userData.light.intensity=4;
+const wallMat=new THREE.MeshStandardMaterial({color:'#46504d',roughness:.86});for(let i=-24;i<=24;i++){for(const z of [-20,20]){const w=solid(new THREE.BoxGeometry(1.05,1.35,.75),wallMat);w.position.set(i,terrainHeight(i,z)+.68,z);townWorld.add(w);}for(const x of [-24,24]){const w=solid(new THREE.BoxGeometry(.75,1.35,1.05),wallMat);w.position.set(x,terrainHeight(x,i)+.68,i);townWorld.add(w);}}
 
-const sky = new THREE.Mesh(new THREE.SphereGeometry(150, 32, 20), createSkyMaterial());
-scene.add(sky);
-const hemi = new THREE.HemisphereLight('#b9d9dd', '#182019', 1.7);
-const sun = new THREE.DirectionalLight('#ffd3a0', 4.2);
-sun.position.set(-28, 42, -24);
-sun.castShadow = true;
-sun.shadow.mapSize.set(2048, 2048);
-sun.shadow.camera.left = sun.shadow.camera.bottom = -42;
-sun.shadow.camera.right = sun.shadow.camera.top = 42;
-sun.shadow.camera.near = 4; sun.shadow.camera.far = 105;
-sun.shadow.bias = -.0002;
-scene.add(hemi, sun);
+// Roaming overworld bands. They trigger tower-defense encounters on contact.
+const bands=[];function makeBand(x,z,orc=false){const group=new THREE.Group();for(const [gx,gz] of [[0,0],[-.85,.55],[.85,.4]]){const goblin=createGoblin(Math.floor(rng()*9));goblin.scale.setScalar(.7);goblin.position.set(gx,0,gz);group.add(goblin);}if(orc){const o=createOrc();o.scale.setScalar(.72);o.position.set(0,0,-1);group.add(o);}group.position.set(x,terrainHeight(x,z),z);group.userData={home:new THREE.Vector3(x,0,z),orc,alive:true,phase:rng()*6};overworld.add(group);bands.push(group);return group;}
+makeBand(13,8,false);makeBand(-14,12,true);makeBand(17,-14,false);
 
-const terrainMaterial = createTerrainMaterial();
-const terrainGeometry = new THREE.PlaneGeometry(126, 126, 180, 180);
-terrainGeometry.rotateX(-Math.PI / 2);
-const terrain = new THREE.Mesh(terrainGeometry, terrainMaterial);
-terrain.receiveShadow = true;
-scene.add(terrain);
+const SAVE_KEY='legend-of-bram-v3-save';
+let game={exp:0,gold:0,goblins:0,materials:{'Goblin Bone':0,'Orc Tusk':0,'Wood':0},keyItems:[],weapons:['Hammer'],equipped:'Hammer',quest:'find_knight',bossDefeated:false,location:'meadow',tutorial:'move',cutscenes:[],defeatedBands:[],npcs:{mira:false,oren:false}};
+let state='title',activeBand=null,battleMode='normal',placed=false,prep=15,waveClock=0,spawnIndex=0,enemies=[],effects=[],pathCurve=null,pathSamples=[],bossStage='',bossEnemy=null,lastAttack=0,moveTutorialTime=0,toastTimer=0,cutsceneData=null,cutsceneIndex=0,cutsceneCallback=null,cameraFocus=null,currentInventoryTab='weapons';
+const questDefs={find_knight:['A Stranger in the Meadow','Find the knight beside the ruined altar.',0,1],goblin_oath:['The Goblin Oath','Defeat 10 goblins for Sir Calder.',()=>Math.min(game.goblins,10),10],confront_knight:['An Oath Fulfilled','Return to Sir Calder at the altar.',0,1],defeat_necromancer:['The Knight’s Betrayal','Defeat Calder and his undead army.',0,1],use_portal:['The Road to Starfall','Use the Teleporter Key in the meadow portal.',0,1],reach_town:['A Town Beneath the Stars','Speak with Mira and Oren in Starfall Town.',()=>Number(game.npcs?.mira)+Number(game.npcs?.oren),2],complete:['The Ashen Oath','Explore Starfall and prepare for the road ahead.',1,1]};
+const cutscenes={intro:[['NARRATOR','Ash has fallen across the Meadow of Cinders for a hundred years. Tonight, something beneath it wakes.','player'],['BRAM','The old road is gone… but that light belongs to Starfall.','portal'],['NARRATOR','A lone knight waits beside the ruined altar.','knight']],knight:[['SIR CALDER','Bram Stoneguard. I thought your line had vanished with the town.','knight'],['BRAM','Who are you—and why are goblins carrying Starfall steel?','player'],['SIR CALDER','Calder, last knight of the pass. Slay ten of them and I will open the road home.','knight']],encounter:[['BRAM','They have the road surrounded. I will hold this ground.','band'],['TUTORIAL','Place Bram on open ground. He attacks enemies automatically as they follow the pebble path.','battle']],betrayal:[['SIR CALDER','Excellent work, “hero.” Every goblin you struck fed the oath beneath this altar.','knight'],['BRAM','You never guarded this pass.','player'],['SIR CALDER','No. I buried it. Minions—rise.','altar']],necromancer:[['CALDER','Why do I always have to do things myself?','battle'],['NARRATOR','The fallen knight tears away his armor. The necromancer beneath begins to heal.','battle']],victory:[['BRAM','Your oath is broken. Starfall belongs to the living.','player'],['NARRATOR','The Teleporter Key answers. A path to the town opens in the meadow.','portal']],town:[['MIRA','Bram? By the forge… a Stoneguard came home.','mira'],['OREN','Then perhaps the roads will carry more than ghosts again.','oren'],['NARRATOR','Starfall Town is safe—for now. The altar at its heart waits for the next chapter.','townAltar']]};
 
-const waterMaterial = createWaterMaterial();
-const lakeGeometry = new THREE.CircleGeometry(7.8, 64, 0, Math.PI * 2);
-lakeGeometry.rotateX(-Math.PI / 2);
-const lake = new THREE.Mesh(lakeGeometry, waterMaterial);
-lake.position.set(-22, -.42, -13);
-scene.add(lake);
-for (const [x, z, scale] of [[-28,-8,.6],[-17,-18,.48],[-26,-20,.38]]) {
-  const pool = new THREE.Mesh(lakeGeometry, waterMaterial); pool.scale.setScalar(scale); pool.position.set(x,-.36,z); scene.add(pool);
-}
-
-const rand = (() => { let seed = 71823; return () => ((seed = seed * 16807 % 2147483647) - 1) / 2147483646; })();
-const colliders = [];
-const environment = new THREE.Group();
-scene.add(environment);
-function place(object, x, z, radius = object.userData.radius || .5) {
-  object.position.set(x, terrainHeight(x, z), z);
-  environment.add(object);
-  if (radius) colliders.push({ object, radius });
-  return object;
-}
-
-for (let i = 0; i < 62; i++) {
-  const angle = rand() * Math.PI * 2, radius = 10 + rand() * 48, x = Math.cos(angle) * radius, z = Math.sin(angle) * radius;
-  if (Math.hypot(x + 22, z + 13) < 10 || Math.hypot(x, z) < 7) continue;
-  const tree = createTree(.72 + rand() * .62, rand() > .82); tree.rotation.y = rand() * Math.PI * 2; place(tree, x, z);
-}
-for (let i = 0; i < 42; i++) {
-  const angle = rand() * Math.PI * 2, radius = 7 + rand() * 48, x = Math.cos(angle) * radius, z = Math.sin(angle) * radius;
-  if (Math.hypot(x, z) < 5) continue;
-  const rock = createRock(.25 + rand() * .72); rock.rotation.y = rand() * 6; place(rock, x, z);
-}
-
-const grassGeo = new THREE.ConeGeometry(.055, .52, 4), grassMat = new THREE.MeshStandardMaterial({ color: '#315b3d', roughness: 1 });
-const grass = new THREE.InstancedMesh(grassGeo, grassMat, 950);
-grass.castShadow = false;
-const dummy = new THREE.Object3D();
-for (let i = 0; i < 950; i++) {
-  const x = (rand() - .5) * 112, z = (rand() - .5) * 112;
-  dummy.position.set(x, terrainHeight(x,z)+.24, z); dummy.rotation.y = rand()*6; dummy.scale.set(.6+rand()*.8,.6+rand()*.9,.6+rand()*.8); dummy.updateMatrix(); grass.setMatrixAt(i,dummy.matrix);
-}
-environment.add(grass);
-
-const ruinStone = new THREE.MeshStandardMaterial({ color:'#49534f', roughness:.84, metalness:.05 });
-function shadowMesh(geometry, material = ruinStone) { const m=new THREE.Mesh(geometry,material);m.castShadow=m.receiveShadow=true;return m; }
-function createRuin(x,z,rotation=0) {
-  const ruin = new THREE.Group();
-  const left=shadowMesh(new THREE.BoxGeometry(1.25,4.4,1.2)),right=left.clone(),cap=shadowMesh(new THREE.BoxGeometry(5.3,1.05,1.25));
-  left.position.set(-2,2.2,0);right.position.set(2,2.2,0);cap.position.set(0,4.45,0);cap.rotation.z=.03;
-  const runeMat=new THREE.MeshStandardMaterial({color:'#6db9c1',emissive:'#318b9b',emissiveIntensity:1.8,roughness:.4});
-  const rune=shadowMesh(new THREE.TorusGeometry(.48,.07,8,22,Math.PI*1.65),runeMat);rune.position.set(0,3.65,.68);rune.rotation.z=.4;
-  ruin.add(left,right,cap,rune);ruin.position.set(x,terrainHeight(x,z),z);ruin.rotation.y=rotation;environment.add(ruin);colliders.push({object:ruin,radius:2.5});
-}
-createRuin(16,-17,.38);createRuin(-18,21,-.7);createRuin(24,18,1.8);
-
-const altar = createAltar();
-altar.position.set(0, terrainHeight(0,0), 0);
-scene.add(altar);
-colliders.push({ object: altar, radius: altar.userData.radius });
-
-const moonwell = new THREE.Group();
-const wellStone = new THREE.MeshStandardMaterial({color:'#394a4a',roughness:.65,metalness:.12});
-for(let i=0;i<12;i++){const stone=shadowMesh(new THREE.BoxGeometry(.7,.5,1.1),wellStone);const a=i/12*Math.PI*2;stone.position.set(Math.cos(a)*2,.25,Math.sin(a)*2);stone.rotation.y=-a;moonwell.add(stone);}
-const wellGlow=new THREE.Mesh(new THREE.CircleGeometry(1.65,40),new THREE.MeshBasicMaterial({color:'#62d4dc',transparent:true,opacity:.62}));wellGlow.rotation.x=-Math.PI/2;wellGlow.position.y=.14;moonwell.add(wellGlow);
-moonwell.position.set(0,terrainHeight(0,10),10);scene.add(moonwell);
-
-const player = createBram();
-scene.add(player);
-const rig = player.userData.rig;
-const enemies = [], drops = [], effects = [];
-const enemySpawns = [[15,10],[-16,-4],[10,-22]];
-function healthBar() {
-  const group=new THREE.Group(),back=new THREE.Mesh(new THREE.PlaneGeometry(1.35,.13),new THREE.MeshBasicMaterial({color:'#15120f'})),fill=new THREE.Mesh(new THREE.PlaneGeometry(1.28,.075),new THREE.MeshBasicMaterial({color:'#9cca68'}));
-  back.position.y=2.48;fill.position.set(0,2.48,.01);group.add(back,fill);group.userData.fill=fill;return group;
-}
-enemySpawns.forEach(([x,z],index)=>{const model=createGoblin(index);model.position.set(x,terrainHeight(x,z),z);const bar=healthBar();model.add(bar);scene.add(model);enemies.push({index,model,bar,hp:100,alive:true,home:new THREE.Vector3(x,0,z),attackAt:0,phase:rand()*6});});
-
-const particleGeo = new THREE.BufferGeometry();
-const particlePositions = new Float32Array(190*3);
-for(let i=0;i<190;i++){particlePositions[i*3]=(rand()-.5)*100;particlePositions[i*3+1]=2+rand()*15;particlePositions[i*3+2]=(rand()-.5)*100;}
-particleGeo.setAttribute('position',new THREE.BufferAttribute(particlePositions,3));
-const motes=new THREE.Points(particleGeo,new THREE.PointsMaterial({color:'#8fdac7',size:.08,transparent:true,opacity:.66,depthWrite:false,blending:THREE.AdditiveBlending}));scene.add(motes);
-
-const keys = new Set();
-let playing=false, health=100, shards=0, completed=false, attackStart=-10, attackCooldown=0, toastTimer=0, saveTimer=0;
-const saveKey='legend-of-bram-v2-save';
-const titleScreen=$('#titleScreen'),deathScreen=$('#deathScreen'),victoryScreen=$('#victoryScreen'),continueButton=$('#continueGame'),prompt=$('#prompt'),toast=$('#toast');
-
-function showToast(text){toast.textContent=text;toast.hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.hidden=true,2400);}
+const questTitle=$('#questTitle'),questText=$('#questText'),questCount=$('#questCount'),questFill=$('#questFill'),battleHud=$('#battleHud'),bossBar=$('#bossBar'),tutorial=$('#tutorial'),prompt=$('#prompt'),toast=$('#toast'),cinematic=$('#cinematic');
 function updateHUD(){
-  $('#healthText').textContent=Math.max(0,Math.ceil(health));$('#healthFill').style.width=`${Math.max(0,health)}%`;$('#shards').textContent=shards;
-  $('#progress').textContent=completed?'Altar awakened':`${shards} / 3 recovered`;
-  $('#objective').textContent=completed?'Explore the Moonfall Wilds':shards>=3?'Return to the ancient altar':'Recover the fallen Star Shards';
+  $('#exp').textContent=game.exp.toLocaleString();$('#gold').textContent=game.gold.toLocaleString();$('#location').textContent=game.location==='town'?'Starfall Town':state.startsWith('battle')?'Cinderpath Ambush':'Meadow of Cinders';
+  const def=questDefs[game.quest]||questDefs.complete,value=typeof def[2]==='function'?def[2]():def[2];questTitle.textContent=def[0];questText.textContent=def[1];questCount.textContent=`${value} / ${def[3]}`;questFill.style.width=`${Math.min(100,value/def[3]*100)}%`;
 }
-function saveGame(){if(!playing)return;localStorage.setItem(saveKey,JSON.stringify({x:player.position.x,z:player.position.z,health,shards,completed,defeated:enemies.filter(e=>!e.alive).map(e=>e.index)}));}
-function resetEnemy(enemy){enemy.alive=true;enemy.hp=100;enemy.model.visible=true;enemy.model.position.set(enemy.home.x,terrainHeight(enemy.home.x,enemy.home.z),enemy.home.z);enemy.bar.userData.fill.scale.x=1;}
-function begin(data=null){
-  playing=true;titleScreen.hidden=true;deathScreen.hidden=true;victoryScreen.hidden=true;health=data?.health??100;shards=data?.shards??0;completed=Boolean(data?.completed);
-  const x=data?.x??0,z=data?.z??10;player.position.set(x,terrainHeight(x,z),z);
-  enemies.forEach(enemy=>{resetEnemy(enemy);if(data?.defeated?.includes(enemy.index)){enemy.alive=false;enemy.model.visible=false;}});
-  updateHUD();showToast(data?'Journey restored':'Welcome to the Moonfall Wilds');
-}
-function newJourney(){localStorage.removeItem(saveKey);begin();}
-$('#newGame').onclick=newJourney;
-continueButton.disabled=!localStorage.getItem(saveKey);
-continueButton.onclick=()=>{try{begin(JSON.parse(localStorage.getItem(saveKey)));}catch{newJourney();}};
-$('#retry').onclick=()=>begin({x:0,z:10,health:100,shards,completed,defeated:enemies.filter(e=>!e.alive).map(e=>e.index)});
-$('#keepExploring').onclick=()=>{victoryScreen.hidden=true;playing=true;};
+function save(){if(state==='title')return;const savingBattle=battleWorld.visible;localStorage.setItem(SAVE_KEY,JSON.stringify({...game,x:savingBattle?0:player.position.x,z:savingBattle?5:player.position.z,bands:bands.map(b=>({alive:b.visible,orc:b.userData.orc,x:b.position.x,z:b.position.z}))}));}
+function load(data){game={...game,...data,materials:{...game.materials,...data.materials},npcs:{mira:false,oren:false,...data.npcs}};if(game.quest==='defeat_necromancer'&&!game.bossDefeated)game.quest='confront_knight';player.position.set(data.x??-4,0,data.z??7);bands.forEach((band,i)=>{const saved=data.bands?.[i];if(saved){band.visible=saved.alive;band.position.set(saved.x,0,saved.z);band.userData.orc=saved.orc;}});knight.visible=!game.bossDefeated;portal.userData.active=game.bossDefeated;portal.userData.light.intensity=game.bossDefeated?5:0;game.location==='town'?enterTown(false):enterMeadow();if(game.tutorial==='move')tutorialStep('Movement','Use WASD or the arrow keys to move Bram through the meadow.');else if(game.tutorial==='meet')tutorialStep('Interaction','Find Sir Calder by the ruined altar. Press E when the interaction prompt appears.');else tutorial.hidden=true;updateHUD();}
+function toastMessage(text){toast.textContent=text;toast.hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.hidden=true,2400);}
+function tutorialStep(title,text){$('#tutorialTitle').textContent=title;$('#tutorialText').textContent=text;tutorial.hidden=false;}
+function finishTutorial(){game.tutorial='done';tutorial.hidden=true;save();}
+function focusObject(name){return name==='player'?player:name==='knight'?knight:name==='portal'?portal:name==='band'?activeBand:name==='mira'?mira:name==='oren'?oren:name==='townAltar'?townAltar:name==='altar'?oldAltar:null;}
+function playCutscene(id,callback){const lines=cutscenes[id];if(!lines){callback?.();return;}state='cutscene';cinematic.hidden=false;cutsceneData=lines;cutsceneIndex=0;cutsceneCallback=callback;showCutsceneLine();}
+function showCutsceneLine(){const [speaker,text,focus]=cutsceneData[cutsceneIndex];$('#speaker').textContent=speaker;$('#dialogue').textContent=text;cameraFocus=focusObject(focus);}
+function endCutscene(){cinematic.hidden=true;cameraFocus=null;const callback=cutsceneCallback;cutsceneData=null;cutsceneCallback=null;callback?.();}
+function advanceCutscene(){if(!cutsceneData)return;if(++cutsceneIndex>=cutsceneData.length)endCutscene();else showCutsceneLine();}
+$('#nextDialogue').onclick=advanceCutscene;$('#skipCutscene').onclick=endCutscene;
 
-function collisionAt(position){
-  if(Math.hypot(position.x,position.z)>56)return true;
-  return colliders.some(({object,radius})=>object.visible&&Math.hypot(position.x-object.position.x,position.z-object.position.z)<radius+player.userData.radius);
-}
-function movePlayer(dt,time){
-  let dx=(keys.has('d')||keys.has('arrowright')?1:0)-(keys.has('a')||keys.has('arrowleft')?1:0),dz=(keys.has('s')||keys.has('arrowdown')?1:0)-(keys.has('w')||keys.has('arrowup')?1:0);
-  const moving=dx||dz;
-  if(moving){const length=Math.hypot(dx,dz);dx/=length;dz/=length;const speed=5.4*dt,next=player.position.clone();next.x+=dx*speed;next.z+=dz*speed;
-    if(!collisionAt(next)){player.position.x=next.x;player.position.z=next.z;}else{next.set(player.position.x+dx*speed,0,player.position.z);if(!collisionAt(next))player.position.x=next.x;next.set(player.position.x,0,player.position.z+dz*speed);if(!collisionAt(next))player.position.z=next.z;}
-    player.rotation.y=THREE.MathUtils.damp(player.rotation.y,Math.atan2(dx,dz),14,dt);
-  }
-  player.position.y=terrainHeight(player.position.x,player.position.z);
-  const stride=moving?Math.sin(time*10):0;rig.leftLeg.rotation.x=stride*.5;rig.rightLeg.rotation.x=-stride*.5;rig.leftArm.rotation.x=-stride*.2;
-  rig.visual.position.y=THREE.MathUtils.damp(rig.visual.position.y,moving?Math.abs(Math.sin(time*10))*.08:0,12,dt);
-}
-function spawnShockwave(){
-  const ring=new THREE.Mesh(new THREE.RingGeometry(.55,.8,48),new THREE.MeshBasicMaterial({color:'#d8f2bf',transparent:true,opacity:.9,side:THREE.DoubleSide,depthWrite:false,blending:THREE.AdditiveBlending}));
-  ring.rotation.x=-Math.PI/2;ring.position.copy(player.position);ring.position.y+=.12;scene.add(ring);effects.push({mesh:ring,age:0,duration:.48});
-}
-function attack(){if(!playing||attackCooldown>0)return;attackCooldown=.72;attackStart=performance.now()/1000;spawnShockwave();enemies.forEach(enemy=>{if(enemy.alive&&enemy.model.position.distanceTo(player.position)<3.4){enemy.hp-=55;enemy.bar.userData.fill.scale.x=Math.max(0,enemy.hp/100);enemy.bar.userData.fill.position.x=-(1-enemy.hp/100)*.64;if(enemy.hp<=0)defeatEnemy(enemy);}});}
-function defeatEnemy(enemy){
-  enemy.alive=false;enemy.model.visible=false;const shard=new THREE.Mesh(new THREE.OctahedronGeometry(.34),new THREE.MeshStandardMaterial({color:'#9ce8ff',emissive:'#44bde9',emissiveIntensity:3,roughness:.2,metalness:.25}));
-  shard.position.copy(enemy.model.position);shard.position.y+=.8;scene.add(shard);const light=new THREE.PointLight('#64d8ff',2.8,5);shard.add(light);drops.push({mesh:shard,baseY:shard.position.y});showToast('Corruption broken — a Star Shard appeared');
-}
-function animateAttack(time){const elapsed=time-attackStart;if(elapsed<.58){const p=elapsed/.58,wind=Math.min(1,p/.28),strike=Math.max(0,(p-.28)/.72);rig.rightArm.rotation.x=p<.28?-wind*1.35:-1.35+strike*3.05;rig.rightArm.rotation.z=-.22+Math.sin(p*Math.PI)*.35;}else{rig.rightArm.rotation.x=THREE.MathUtils.lerp(rig.rightArm.rotation.x,0,.18);rig.rightArm.rotation.z=THREE.MathUtils.lerp(rig.rightArm.rotation.z,0,.18);}}
-function updateEnemies(dt,time){
-  enemies.forEach(enemy=>{if(!enemy.alive)return;const distance=enemy.model.position.distanceTo(player.position),dir=new THREE.Vector3().subVectors(player.position,enemy.model.position);dir.y=0;
-    if(distance<10&&distance>1.25){dir.normalize();const next=enemy.model.position.clone().addScaledVector(dir,dt*(distance<4?2.5:1.7));if(!collisionAt(next)){enemy.model.position.x=next.x;enemy.model.position.z=next.z;}enemy.model.rotation.y=THREE.MathUtils.damp(enemy.model.rotation.y,Math.atan2(dir.x,dir.z),10,dt);}
-    else if(distance>=10){enemy.model.position.x+=Math.sin(time*.7+enemy.phase)*dt*.25;enemy.model.position.z+=Math.cos(time*.55+enemy.phase)*dt*.2;}
-    enemy.model.position.y=terrainHeight(enemy.model.position.x,enemy.model.position.z);const walk=Math.sin(time*8+enemy.phase)*(distance<10?.48:.16);enemy.model.userData.rig.leftLeg.rotation.x=walk;enemy.model.userData.rig.rightLeg.rotation.x=-walk;
-    enemy.model.children.forEach(child=>{if(child.userData.fill)child.quaternion.copy(camera.quaternion);});
-    if(distance<1.45&&time>enemy.attackAt){enemy.attackAt=time+1.15;health-=12;updateHUD();showToast('Bram took 12 damage');if(health<=0){playing=false;deathScreen.hidden=false;saveGame();}}
-  });
-}
-function updateDrops(dt,time){for(let i=drops.length-1;i>=0;i--){const drop=drops[i];drop.mesh.rotation.y+=dt*2.4;drop.mesh.position.y=drop.baseY+Math.sin(time*3+i)*.18;if(drop.mesh.position.distanceTo(player.position)<1.45){scene.remove(drop.mesh);drops.splice(i,1);shards=Math.min(3,shards+1);updateHUD();showToast(`Star Shard recovered · ${shards}/3`);saveGame();}}}
-function updateAltar(time){altar.userData.crystal.rotation.y=time*.7;altar.userData.crystal.position.y=3.15+Math.sin(time*1.7)*.14;const near=player.position.distanceTo(altar.position)<4.4;prompt.hidden=!(playing&&near);if(near)prompt.textContent=shards>=3?'Press E to awaken the Starfall Altar':`The altar needs ${3-shards} more Star Shard${3-shards===1?'':'s'}`;altar.userData.light.intensity=altar.userData.awake?7:.35+Math.sin(time*2)*.2;}
-function awaken(){if(!playing||shards<3||player.position.distanceTo(altar.position)>=4.4||completed)return;completed=true;altar.userData.awake=true;bloom.strength=.75;updateHUD();saveGame();playing=false;victoryScreen.hidden=false;}
+function enterMeadow(){overworld.visible=true;townWorld.visible=battleWorld.visible=false;if(player.parent!==overworld)overworld.add(player);game.location='meadow';state='world';player.position.y=terrainHeight(player.position.x,player.position.z);updateHUD();}
+function enterTown(withScene=true){overworld.visible=battleWorld.visible=false;townWorld.visible=true;if(player.parent!==townWorld)townWorld.add(player);game.location='town';state='world';player.position.set(0,terrainHeight(0,11),11);updateHUD();if(withScene&&!game.cutscenes.includes('town')){game.cutscenes.push('town');playCutscene('town',()=>{state='world';game.quest='reach_town';updateHUD();save();});}}
+function newGame(){localStorage.removeItem(SAVE_KEY);game={exp:0,gold:0,goblins:0,materials:{'Goblin Bone':0,'Orc Tusk':0,'Wood':0},keyItems:[],weapons:['Hammer'],equipped:'Hammer',quest:'find_knight',bossDefeated:false,location:'meadow',tutorial:'move',cutscenes:[],defeatedBands:[],npcs:{mira:false,oren:false}};bands.forEach((b,i)=>{b.visible=true;b.position.copy(b.userData.home);});knight.visible=true;portal.userData.active=false;player.position.set(-4,terrainHeight(-4,7),7);$('#titleScreen').hidden=true;enterMeadow();playCutscene('intro',()=>{state='world';tutorialStep('Movement','Use WASD or the arrow keys to move Bram through the meadow.');});updateHUD();}
+$('#newGame').onclick=newGame;const continueButton=$('#continueGame');continueButton.disabled=!localStorage.getItem(SAVE_KEY);continueButton.onclick=()=>{try{$('#titleScreen').hidden=true;load(JSON.parse(localStorage.getItem(SAVE_KEY)));toastMessage('Journey restored');}catch{newGame();}};
 
-window.addEventListener('keydown',event=>{const key=event.key.toLowerCase();keys.add(key);if([' ','arrowup','arrowdown','arrowleft','arrowright'].includes(key))event.preventDefault();if(key===' '&&!event.repeat)attack();if(key==='e'&&!event.repeat)awaken();});
-window.addEventListener('keyup',event=>keys.delete(event.key.toLowerCase()));
-window.addEventListener('blur',()=>keys.clear());
+function blocked(position,colliders){if(game.location==='town'&&(Math.abs(position.x)>22.8||Math.abs(position.z)>18.8))return true;if(game.location!=='town'&&Math.hypot(position.x,position.z)>57)return true;return colliders.some(({object,radius})=>object.visible&&Math.hypot(position.x-object.position.x,position.z-object.position.z)<radius+.48);}
+const keys=new Set();function movePlayer(dt,time){let dx=(keys.has('d')||keys.has('arrowright')?1:0)-(keys.has('a')||keys.has('arrowleft')?1:0),dz=(keys.has('s')||keys.has('arrowdown')?1:0)-(keys.has('w')||keys.has('arrowup')?1:0);if(!dx&&!dz){playerRig.leftLeg.rotation.x=playerRig.rightLeg.rotation.x=0;return;}const len=Math.hypot(dx,dz);dx/=len;dz/=len;const current=game.location==='town'?townColliders:worldColliders,next=player.position.clone();next.x+=dx*5.5*dt;next.z+=dz*5.5*dt;if(!blocked(next,current)){player.position.x=next.x;player.position.z=next.z;}player.position.y=terrainHeight(player.position.x,player.position.z);player.rotation.y=THREE.MathUtils.damp(player.rotation.y,Math.atan2(dx,dz),14,dt);const stride=Math.sin(time*10);playerRig.leftLeg.rotation.x=stride*.5;playerRig.rightLeg.rotation.x=-stride*.5;playerRig.visual.position.y=Math.abs(stride)*.07;if(game.tutorial==='move'){moveTutorialTime+=dt;if(moveTutorialTime>1.4){game.tutorial='meet';tutorialStep('Interaction','Find Sir Calder by the ruined altar. Press E when the interaction prompt appears.');toastMessage('Tutorial updated');save();}}}
 
-const cameraTarget=new THREE.Vector3();
-function resize(){const width=canvas.clientWidth,height=canvas.clientHeight;renderer.setSize(width,height,false);composer.setSize(width,height);camera.aspect=width/height;camera.updateProjectionMatrix();}
-window.addEventListener('resize',resize);resize();
-const clock=new THREE.Clock();
-function loop(){requestAnimationFrame(loop);const dt=Math.min(.04,clock.getDelta()),time=clock.elapsedTime;terrainMaterial.uniforms.uTime.value=time;waterMaterial.uniforms.uTime.value=time;motes.rotation.y=time*.008;sky.position.copy(camera.position);attackCooldown=Math.max(0,attackCooldown-dt);
-  if(playing){movePlayer(dt,time);updateEnemies(dt,time);updateDrops(dt,time);saveTimer+=dt;if(saveTimer>2){saveTimer=0;saveGame();}}
-  animateAttack(time);updateAltar(time);effects.forEach((effect,index)=>{effect.age+=dt;const p=effect.age/effect.duration;effect.mesh.scale.setScalar(1+p*5);effect.mesh.material.opacity=1-p;if(p>=1){scene.remove(effect.mesh);effects.splice(index,1);}});
-  cameraTarget.set(player.position.x+8.8,player.position.y+10.5,player.position.z+12.5);camera.position.lerp(cameraTarget,1-Math.exp(-dt*4.5));camera.lookAt(player.position.x,player.position.y+1.1,player.position.z);composer.render();
+function updateBands(dt,time){if(game.location!=='meadow'||game.bossDefeated)return;for(const band of bands){if(!band.visible||band===activeBand)continue;const home=band.userData.home;band.position.x=home.x+Math.cos(time*.45+band.userData.phase)*2;band.position.z=home.z+Math.sin(time*.62+band.userData.phase)*1.4;band.position.y=terrainHeight(band.position.x,band.position.z);const dist=band.position.distanceTo(player.position);if(dist<4)band.position.lerp(player.position,dt*.35);if(dist<1.25&&state==='world'){activeBand=band;startEncounter();break;}}}
+function nearestInteraction(){const list=game.location==='town'?[['Mira',mira,()=>openBlacksmith()],['Oren',oren,()=>openShop()],['Return to the Meadow',returnPortal,()=>enterMeadow()]]:[['Sir Calder',knight,()=>talkKnight()],['Starfall Portal',portal,()=>usePortal()]];let best=null,dist=Infinity;for(const item of list){const d=player.position.distanceTo(item[1].position);if(d<dist){dist=d;best=item;}}return dist<3.3?best:null;}
+function updatePrompt(){if(state!=='world'){prompt.hidden=true;return;}const target=nearestInteraction();prompt.hidden=!target;if(target)prompt.textContent=`Press E · ${target[0]}`;}
+function interact(){if(state!=='world')return;nearestInteraction()?.[2]();}
+function talkKnight(){
+  if(game.quest==='find_knight'){tutorial.hidden=true;playCutscene('knight',()=>{state='world';game.quest='goblin_oath';finishTutorial();updateHUD();toastMessage('Quest started: The Goblin Oath');save();});}
+  else if(game.quest==='goblin_oath')toastMessage(`Sir Calder: ${Math.max(0,10-game.goblins)} goblins remain.`);
+  else if(game.quest==='confront_knight')playCutscene('betrayal',()=>startBossBattle());
 }
-player.position.set(0,terrainHeight(0,10),10);camera.position.set(9,11,23);updateHUD();loop();
+function usePortal(){if(!game.bossDefeated){toastMessage('The portal is sealed by a dark oath.');return;}if(!game.keyItems.includes('Teleporter Key')){toastMessage('A Teleporter Key is required.');return;}enterTown(true);}
+
+// Tower-defense arena and hero placement.
+const pathVariants=[[[-19,-13],[-12,-8],[-13,0],[-5,5],[2,2],[9,7],[18,12]],[[-19,10],[-10,5],[-8,-5],[0,-8],[7,-2],[6,8],[18,10]],[[-18,-12],[-8,-10],[-3,-2],[-10,5],[-1,11],[8,6],[18,12]]];
+function clearBattle(){enemies.forEach(e=>battleWorld.remove(e.model));enemies=[];effects.forEach(e=>battleWorld.remove(e.mesh));effects=[];[...battleWorld.children].filter(c=>c.userData.temporary).forEach(c=>battleWorld.remove(c));bossBar.hidden=true;}
+function buildPath(points){const vectors=points.map(([x,z])=>new THREE.Vector3(x,.08,z));pathCurve=new THREE.CatmullRomCurve3(vectors);pathSamples=pathCurve.getPoints(140);const pebbleMat=new THREE.MeshStandardMaterial({color:'#887b69',roughness:.96});for(let i=0;i<pathSamples.length;i++){const p=pathSamples[i],stone=solid(new THREE.DodecahedronGeometry(.18+(i%5)*.035,0),pebbleMat);stone.position.copy(p);stone.scale.y=.48;stone.rotation.y=i*.71;stone.userData.temporary=true;battleWorld.add(stone);}}
+function startEncounter(){state='cutscene';if(!game.cutscenes.includes('encounter')){game.cutscenes.push('encounter');playCutscene('encounter',()=>setupBattle('normal'));}else setupBattle('normal');}
+function setupBattle(mode){clearBattle();battleMode=mode;overworld.visible=townWorld.visible=false;battleWorld.visible=true;if(player.parent!==battleWorld)battleWorld.add(player);player.position.set(0,0,15);placed=false;prep=15;spawnIndex=0;waveClock=0;bossStage=mode==='boss'?'undead':'';buildPath(pathVariants[Math.floor(rng()*pathVariants.length)]);state='battlePrepare';battleHud.hidden=false;$('#battleLabel').textContent='PREPARATION';$('#battleTimer').textContent='15';$('#battleObjective').textContent='Click open ground to place Bram away from the pebble path.';tutorialStep('Tower Defense','Click open ground to place Bram. He automatically attacks enemies inside his range.');camera.position.set(18,21,24);camera.lookAt(0,0,0);}
+function startBossBattle(){knight.visible=false;game.quest='defeat_necromancer';updateHUD();setupBattle('boss');}
+function distanceToPath(point){let nearest=Infinity;for(const sample of pathSamples)nearest=Math.min(nearest,Math.hypot(point.x-sample.x,point.z-sample.z));return nearest;}
+const raycaster=new THREE.Raycaster(),pointer=new THREE.Vector2();canvas.addEventListener('pointerdown',event=>{if(state!=='battlePrepare')return;const rect=canvas.getBoundingClientRect();pointer.set((event.clientX-rect.left)/rect.width*2-1,-((event.clientY-rect.top)/rect.height)*2+1);raycaster.setFromCamera(pointer,camera);const hit=raycaster.intersectObject(battleGround)[0];if(!hit)return;const p=hit.point;if(Math.abs(p.x)>20||Math.abs(p.z)>20||distanceToPath(p)<1.8){toastMessage('Choose open ground away from the path.');return;}player.position.set(p.x,0,p.z);placed=true;tutorial.hidden=true;$('#battleObjective').textContent='Bram is placed. Prepare for the wave.';});
+const undeadSkin=new THREE.MeshStandardMaterial({color:'#718b72',roughness:.92}),undeadCloth=new THREE.MeshStandardMaterial({color:'#2b3031',roughness:.96});
+function createBattleEnemy(type='goblin',hp=100,speed=.047){let model;if(type==='undead'){model=new THREE.Group();const body=solid(new THREE.CapsuleGeometry(.24,.52,4,7),undeadCloth),head=solid(new THREE.SphereGeometry(.23,8,7),undeadSkin);body.position.y=.6;head.position.y=1.28;model.add(body,head);model.scale.setScalar(.78);}else model=type==='orc'?createOrc():type==='knight'?createKnight():type==='necro'?createKnight():createGoblin(Math.floor(rng()*8));if(type==='necro')model.traverse(o=>{if(o.isMesh&&o.material.color){o.material=o.material.clone();o.material.color.multiply(new THREE.Color('#8050a0'));}});if(type!=='undead')model.scale.multiplyScalar(type==='goblin'?.78:type==='orc'?.82:1);battleWorld.add(model);const enemy={model,type,hp,maxHp:hp,speed,t:0};enemies.push(enemy);return enemy;}
+function beginWave(){state='battleCombat';tutorial.hidden=true;$('#battleLabel').textContent=battleMode==='boss'?'BOSS WAVE':'WAVE ACTIVE';$('#battleTimer').textContent='!';$('#battleObjective').textContent='Bram attacks automatically. Nothing may reach the gate.';if(battleMode==='boss'){for(let i=0;i<100;i++){const e=createBattleEnemy('undead',1,.026+rng()*.012);e.t=-i*.006;}}}
+function spawnNormalWave(){if(spawnIndex>=6+(activeBand?.userData.orc?1:0))return;const orc=activeBand?.userData.orc&&spawnIndex===0;createBattleEnemy(orc?'orc':'goblin',orc?600:100,orc?.015:.044+rng()*.008);spawnIndex++;}
+function hammerAttack(time){if(!enemies.length||time-lastAttack<(game.equipped==='Orc War Club'?1.65:.82))return;const range=game.equipped==='Orc War Club'?3:4.8,targets=enemies.filter(e=>e.t>=0&&e.model.position.distanceTo(player.position)<range);if(!targets.length)return;lastAttack=time;const mode=$('#targeting').value,target=mode==='strong'?targets.reduce((a,b)=>a.hp>b.hp?a:b):mode==='last'?targets.reduce((a,b)=>a.t<b.t?a:b):targets.reduce((a,b)=>a.t>b.t?a:b),aoe=game.equipped==='Orc War Club'?6:3.2,damage=game.equipped==='Orc War Club'?200:65;for(const enemy of enemies)if(enemy.model.position.distanceTo(target.model.position)<aoe)enemy.hp-=damage;const ring=new THREE.Mesh(new THREE.RingGeometry(.35,.68,48),new THREE.MeshBasicMaterial({color:game.equipped==='Orc War Club'?'#9cdb72':'#f1daa0',transparent:true,opacity:.9,side:THREE.DoubleSide,depthWrite:false,blending:THREE.AdditiveBlending}));ring.rotation.x=-Math.PI/2;ring.position.copy(target.model.position);ring.position.y=.12;ring.userData.temporary=true;battleWorld.add(ring);effects.push({mesh:ring,age:0});playerRig.rightArm.rotation.x=-1.3;}
+function killEnemy(enemy){battleWorld.remove(enemy.model);enemies.splice(enemies.indexOf(enemy),1);if(enemy.type==='goblin'){game.goblins++;game.exp+=10;if(rng()<.1){game.materials['Goblin Bone']++;toastMessage('Goblin Bone +1');}}if(enemy.type==='orc'){game.exp+=100;if(rng()<.25){game.materials['Orc Tusk']++;toastMessage('Orc Tusk +1');}}if(enemy===bossEnemy)bossEnemy=null;updateHUD();}
+function leakBattle(){const loss=Math.ceil(game.gold*.05);game.gold=Math.max(0,game.gold-loss);toastMessage(`Gate broken · lost ${loss} gold`);save();if(battleMode==='boss')playCutscene('betrayal',()=>setupBattle('boss'));else setupBattle('normal');}
+function returnFromBattle(win){clearBattle();battleHud.hidden=true;battleWorld.visible=false;overworld.visible=true;if(player.parent!==overworld)overworld.add(player);player.position.set(0,terrainHeight(0,5),5);state='world';if(win){activeBand.visible=false;game.gold+=50;toastMessage('Victory · 50 gold');if(game.goblins>=10&&game.quest==='goblin_oath'){game.quest='confront_knight';toastMessage('Quest updated: Return to Sir Calder');}}activeBand=null;updateHUD();save();}
+function updateBattle(dt,time){if(state==='battlePrepare'){if(placed){prep-=dt;$('#battleTimer').textContent=Math.max(0,Math.ceil(prep));if(prep<=0)beginWave();}return;}if(state!=='battleCombat')return;if(battleMode==='normal'){waveClock-=dt;if(waveClock<=0&&spawnIndex<6+(activeBand?.userData.orc?1:0)){waveClock=.7;spawnNormalWave();}}
+  hammerAttack(time);for(let i=enemies.length-1;i>=0;i--){const enemy=enemies[i];if(enemy.hp<=0){killEnemy(enemy);continue;}enemy.t+=enemy.speed*dt;if(enemy.t>=1){leakBattle();return;}if(enemy.t<0){enemy.model.visible=false;continue;}enemy.model.visible=true;const pos=pathCurve.getPointAt(Math.min(.999,enemy.t));enemy.model.position.copy(pos);const look=pathCurve.getPointAt(Math.min(.999,enemy.t+.01));enemy.model.rotation.y=Math.atan2(look.x-pos.x,look.z-pos.z);enemy.model.position.y=Math.abs(Math.sin(time*9+i))*.06;}
+  effects.forEach((effect,i)=>{effect.age+=dt;effect.mesh.scale.setScalar(1+effect.age*6);effect.mesh.material.opacity=1-effect.age/.55;if(effect.age>.55){battleWorld.remove(effect.mesh);effects.splice(i,1);}});playerRig.rightArm.rotation.x=THREE.MathUtils.lerp(playerRig.rightArm.rotation.x,0,.14);
+  if(battleMode==='normal'&&spawnIndex>=6+(activeBand?.userData.orc?1:0)&&!enemies.length)returnFromBattle(true);
+  if(battleMode==='boss')updateBossBattle();
+}
+function updateBossBattle(){
+  if(bossEnemy)showBoss(bossEnemy.type==='necro'?'CALDER, THE NECROMANCER':'THE FALLEN KNIGHT',bossEnemy);
+  if(bossStage==='undead'&&spawnIndex===0&&!enemies.length){spawnIndex=1;bossStage='knight';bossEnemy=createBattleEnemy('knight',200,.021);showBoss('THE FALLEN KNIGHT',bossEnemy);}
+  else if(bossStage==='knight'&&!bossEnemy&&!enemies.length){bossStage='transition';playCutscene('necromancer',()=>{state='battleCombat';bossStage='necro';bossEnemy=createBattleEnemy('necro',400,.018);bossEnemy.regen=5;showBoss('CALDER, THE NECROMANCER',bossEnemy);});}
+  else if(bossStage==='necro'&&bossEnemy){bossEnemy.hp=Math.min(bossEnemy.maxHp,bossEnemy.hp+5/60);showBoss('CALDER, THE NECROMANCER',bossEnemy);}
+  else if(bossStage==='necro'&&!bossEnemy&&!enemies.length){bossStage='done';game.bossDefeated=true;game.exp+=1500;game.gold+=1000;if(!game.keyItems.includes('Teleporter Key'))game.keyItems.push('Teleporter Key');game.quest='use_portal';portal.userData.active=true;portal.userData.light.intensity=5;clearBattle();battleHud.hidden=true;battleWorld.visible=false;overworld.visible=true;overworld.add(player);player.position.set(0,terrainHeight(0,4),4);playCutscene('victory',()=>{state='world';updateHUD();save();});}
+}
+function showBoss(name,enemy){bossBar.hidden=false;bossEnemy=enemy;$('#bossName').textContent=name;const pct=Math.max(0,enemy.hp/enemy.maxHp*100);$('#bossFill').style.width=`${pct}%`;$('#bossHp').textContent=`${Math.ceil(enemy.hp)} / ${enemy.maxHp}`;}
+
+function openInventory(tab=currentInventoryTab){state='menu';currentInventoryTab=tab;$('#inventory').hidden=false;renderInventory();}
+function renderInventory(){const items=currentInventoryTab==='weapons'?game.weapons.map(name=>[name,name===game.equipped?'Equipped':'Equip']):currentInventoryTab==='materials'?Object.entries(game.materials):game.keyItems.map(name=>[name,'Key Item']);$('#inventoryGrid').innerHTML=items.length?items.map(([name,count])=>`<article class="item-card"><b>${name}</b><span>${count}</span></article>`).join(''):'<article class="item-card"><b>Empty</b><span>Nothing collected yet.</span></article>';}
+$('#inventoryButton').onclick=()=>openInventory();document.querySelectorAll('.tab').forEach(button=>button.onclick=()=>{document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b===button));currentInventoryTab=button.dataset.tab;renderInventory();});
+$('#continueExploring').onclick=()=>{$('#ending').hidden=true;state='world';};
+document.querySelectorAll('[data-close]').forEach(button=>button.onclick=()=>{document.getElementById(button.dataset.close).hidden=true;state='world';});
+function openService(title,type,cards){state='menu';$('#serviceTitle').textContent=title;$('#serviceType').textContent=type;$('#serviceContent').innerHTML=`<div class="service-grid">${cards.join('')}</div>`;$('#serviceMenu').hidden=false;}
+function buyMaterial(name,price){if(game.gold<price){toastMessage('Not enough gold');return;}game.gold-=price;game.materials[name]++;toastMessage(`${name} +1`);updateHUD();save();openShop();}
+function buyTool(name,price){if(game.keyItems.includes(name)){toastMessage('Already owned');return;}if(game.gold<price){toastMessage('Not enough gold');return;}game.gold-=price;game.keyItems.push(name);toastMessage(`${name} obtained`);updateHUD();save();openShop();}
+function townNpcSpoken(name){if(game.quest!=='reach_town')return;game.npcs[name]=true;if(game.npcs.mira&&game.npcs.oren){game.quest='complete';updateHUD();save();$('#ending').hidden=false;state='menu';}else{updateHUD();save();}}
+function openShop(){townNpcSpoken('oren');openService('Oren’s Wayfarer Shop','STARFALL MERCHANT',[['Wood','10','material'],['Goblin Bone','40','material'],['Orc Tusk','500','material'],['Strange Rune','1','tool'],['Key to the Man Cave','1000','tool']].map(([name,price,type])=>`<article class="service-card"><h3>${name}</h3><p>${name==='Strange Rune'?'Locals say it can awaken the strange altar.':name==='Key to the Man Cave'?'A heavy key bearing an unfamiliar crest.':'A useful crafting material.'}</p><button data-buy="${name}" data-price="${price}" data-type="${type}" ${type==='tool'&&game.keyItems.includes(name)?'disabled':''}>${type==='tool'&&game.keyItems.includes(name)?'Owned':`Buy · ${Number(price).toLocaleString()} Gold`}</button></article>`));document.querySelectorAll('[data-buy]').forEach(b=>b.onclick=()=>b.dataset.type==='tool'?buyTool(b.dataset.buy,+b.dataset.price):buyMaterial(b.dataset.buy,+b.dataset.price));}
+function craftWeapon(name,cost){if(game.weapons.includes(name)){game.equipped=name;toastMessage(`${name} equipped`);save();return;}if(Object.entries(cost).some(([m,c])=>game.materials[m]<c)){toastMessage('Missing crafting materials');return;}for(const [m,c] of Object.entries(cost))game.materials[m]-=c;game.weapons.push(name);game.equipped=name;toastMessage(`${name} crafted and equipped`);save();openBlacksmith();}
+function openBlacksmith(){townNpcSpoken('mira');openService('Mira’s Ember Anvil','STARFALL BLACKSMITH',[`<article class="service-card"><h3>Woodcutter Axe</h3><p>A fast blade for harvesting and close defense.</p><button id="craftAxe">${game.weapons.includes('Woodcutter Axe')?'Equip':'Craft · 5 Goblin Bones'}</button></article>`,`<article class="service-card"><h3>Orc War Club</h3><p>Slow, brutal, 200 damage with a six-meter shockwave.</p><button id="craftClub">${game.weapons.includes('Orc War Club')?'Equip':'Craft · 25 Bones · 10 Tusks'}</button></article>`]);$('#craftAxe').onclick=()=>craftWeapon('Woodcutter Axe',{'Goblin Bone':5});$('#craftClub').onclick=()=>craftWeapon('Orc War Club',{'Goblin Bone':25,'Orc Tusk':10});}
+
+window.addEventListener('keydown',event=>{const key=event.key.toLowerCase();keys.add(key);if([' ','arrowup','arrowdown','arrowleft','arrowright'].includes(key))event.preventDefault();if(key==='e'&&!event.repeat)interact();if(key==='i'&&!event.repeat)openInventory();});window.addEventListener('keyup',event=>keys.delete(event.key.toLowerCase()));window.addEventListener('blur',()=>keys.clear());
+
+// Atmospheric motes and cinematic camera.
+const motePos=new Float32Array(260*3);for(let i=0;i<260;i++){motePos[i*3]=(rng()-.5)*110;motePos[i*3+1]=1+rng()*14;motePos[i*3+2]=(rng()-.5)*110;}const moteGeo=new THREE.BufferGeometry();moteGeo.setAttribute('position',new THREE.BufferAttribute(motePos,3));const motes=new THREE.Points(moteGeo,new THREE.PointsMaterial({color:'#9bd9c3',size:.07,transparent:true,opacity:.62,depthWrite:false,blending:THREE.AdditiveBlending}));scene.add(motes);
+function resize(){const w=canvas.clientWidth,h=canvas.clientHeight;renderer.setSize(w,h,false);composer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();}window.addEventListener('resize',resize);resize();
+const clock=new THREE.Clock(),cameraGoal=new THREE.Vector3();let saveClock=0,spawnClock=0;
+function updateCamera(dt){if(state==='cutscene'&&cameraFocus){const p=cameraFocus.getWorldPosition(new THREE.Vector3());cameraGoal.set(p.x+5.8,p.y+4.3,p.z+7.2);camera.position.lerp(cameraGoal,1-Math.exp(-dt*2.5));camera.lookAt(p.x,p.y+1.25,p.z);return;}if(state.startsWith('battle')){camera.position.lerp(new THREE.Vector3(18,21,24),1-Math.exp(-dt*3));camera.lookAt(0,0,0);return;}const p=player.getWorldPosition(new THREE.Vector3());cameraGoal.set(p.x+9,p.y+10.5,p.z+13);camera.position.lerp(cameraGoal,1-Math.exp(-dt*4.5));camera.lookAt(p.x,p.y+1.1,p.z);}
+function animatePortal(portal,time){portal.userData.ring.rotation.z=time*.65;portal.children.forEach(child=>{if(child.userData.orbit!==undefined){const a=child.userData.orbit+time*.55;child.position.x=Math.cos(a)*1.7;child.position.z=Math.sin(a)*1.7;}});portal.userData.light.intensity=portal.userData.active?4+Math.sin(time*2)*.7:0;portal.userData.core.material.opacity=portal.userData.active?.55:.08;}
+function loop(){requestAnimationFrame(loop);const dt=Math.min(.04,clock.getDelta()),time=clock.elapsedTime;terrainMaterial.uniforms.uTime.value=time;waterMaterial.uniforms.uTime.value=time;motes.rotation.y=time*.006;sky.position.copy(camera.position);animatePortal(portal,time);animatePortal(returnPortal,time);oldAltar.userData.crystal.rotation.y=time*.6;townAltar.userData.crystal.rotation.y=time*.6;
+  if(state==='world'){movePlayer(dt,time);updateBands(dt,time);updatePrompt();spawnClock+=dt;if(spawnClock>1){spawnClock=0;if(game.location==='meadow'&&rng()<.05&&bands.filter(b=>b.visible).length<4){const band=bands.find(b=>!b.visible);if(band&&!game.bossDefeated){band.visible=true;const a=rng()*6.28,r=15+rng()*25;band.userData.home.set(Math.cos(a)*r,0,Math.sin(a)*r);band.position.copy(band.userData.home);band.userData.orc=rng()<.35;}}}}
+  if(state.startsWith('battle'))updateBattle(dt,time);updateCamera(dt);saveClock+=dt;if(saveClock>3){saveClock=0;save();}composer.render();}
+player.position.set(-4,terrainHeight(-4,7),7);camera.position.set(10,12,22);portal.userData.active=false;returnPortal.userData.active=true;updateHUD();loop();
