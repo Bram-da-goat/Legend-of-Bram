@@ -105,10 +105,11 @@ export function createKnight() {
   mesh(new THREE.BoxGeometry(1.08,.18,.62),trim,visual,[0,1.18,0]);
   for(const y of [1.42,1.72,2.02])mesh(new THREE.BoxGeometry(.94,.2,.14),trim,visual,[0,y,.48]);
   const leftArm=new THREE.Group(),rightArm=new THREE.Group();leftArm.position.set(-.66,1.9,0);rightArm.position.set(.66,1.9,0);visual.add(leftArm,rightArm);
-  for(const arm of [leftArm,rightArm]){mesh(new THREE.SphereGeometry(.23,12,9),plate,arm);mesh(new THREE.CapsuleGeometry(.13,.62,5,8),trim,arm,[0,-.36,0]);}
+  const leftShoulder=mesh(new THREE.SphereGeometry(.23,12,9),plate,leftArm),rightShoulder=mesh(new THREE.SphereGeometry(.23,12,9),plate,rightArm);
+  for(const arm of [leftArm,rightArm])mesh(new THREE.CapsuleGeometry(.13,.62,5,8),trim,arm,[0,-.36,0]);
   const helmet=mesh(new THREE.SphereGeometry(.43,16,12),plate,visual,[0,2.5,0]);helmet.scale.set(.92,1.08,.96);
-  mesh(new THREE.BoxGeometry(.72,.22,.17),trim,visual,[0,2.48,.39]);
-  for(const x of [-.2,0,.2])mesh(new THREE.BoxGeometry(.08,.06,.05),standard('#10181b',.5,.2),visual,[x,2.48,.49]);
+  const visor=mesh(new THREE.BoxGeometry(.72,.22,.17),trim,visual,[0,2.48,.39]),eyeSlits=[];
+  for(const x of [-.2,0,.2])eyeSlits.push(mesh(new THREE.BoxGeometry(.08,.06,.05),standard('#10181b',.5,.2),visual,[x,2.48,.49]));
   const neckGuard=mesh(new THREE.CylinderGeometry(.46,.56,.34,12),trim,visual,[0,2.18,0]);neckGuard.scale.z=.82;
   const cape=mesh(new THREE.PlaneGeometry(1.28,1.95),cloth,visual,[0,1.45,-.44]);cape.rotation.x=.08;
   const plume=mesh(new THREE.ConeGeometry(.16,.78,8),cloth,visual,[0,3.04,-.04]);plume.rotation.z=-.2;
@@ -120,7 +121,21 @@ export function createKnight() {
   const shieldFace=mesh(new THREE.CylinderGeometry(.5,.5,.13,8),plate,shield,[0,-.3,.16]);shieldFace.rotation.x=Math.PI/2;shieldFace.scale.y=1.18;
   mesh(new THREE.CylinderGeometry(.14,.14,.18,10),standard('#a79562',.32,.75),shield,[0,-.3,.25]).rotation.x=Math.PI/2;
   const aura=new THREE.PointLight('#a9c9ff',.32,5);aura.position.y=2;root.add(aura);
-  root.userData.rig={visual,leftLeg,rightLeg,leftArm,rightArm};root.userData.npc='Sir Calder';root.userData.radius=.72;return root;
+  root.userData.rig={visual,leftLeg,rightLeg,leftArm,rightArm};root.userData.armorParts={torso,leftShoulder,rightShoulder,helmet,visor,eyeSlits,neckGuard,cape,plume,shield,shieldFace};root.userData.npc='Sir Calder';root.userData.radius=.72;return root;
+}
+
+export function createNecromancer() {
+  const root=createKnight(),visual=root.userData.rig.visual,{torso,leftShoulder,rightShoulder,helmet,visor,eyeSlits,neckGuard,cape,plume,shield,shieldFace}=root.userData.armorParts;
+  root.traverse(object=>{if(object.isMesh&&object.material.color){object.material=object.material.clone();object.material.color.multiply(new THREE.Color('#705b72'));}});
+  helmet.visible=visor.visible=plume.visible=false;eyeSlits.forEach(slit=>slit.visible=false);leftShoulder.visible=false;rightShoulder.scale.set(.72,.5,.86);rightShoulder.rotation.set(.35,0,-.42);neckGuard.rotation.z=.17;cape.scale.set(.68,.92,1);cape.rotation.z=-.16;shield.scale.set(.68,.82,.72);shield.rotation.set(.18,.24,-.35);shieldFace.material.color.multiplyScalar(.6);
+  const bone=standard('#9aa38d',.9),voidMat=new THREE.MeshStandardMaterial({color:'#18221d',emissive:'#4cbf70',emissiveIntensity:1.3,roughness:.7}),brokenPlate=standard('#35333b',.5,.72);
+  const skull=mesh(new THREE.SphereGeometry(.34,14,11),bone,visual,[0,2.49,.01]);skull.scale.set(.86,1.02,.84);
+  for(const x of [-.12,.12])mesh(new THREE.SphereGeometry(.052,8,7),voidMat,visual,[x,2.53,.29]);
+  const jaw=mesh(new THREE.BoxGeometry(.4,.15,.28),bone,visual,[0,2.29,.06]);jaw.rotation.x=-.1;
+  for(const [x,y,z,s,rx,rz] of [[-.3,2.7,0,.34,.2,-.5],[.31,2.58,-.02,.28,-.2,.7],[-.1,2.84,-.08,.25,.5,.1]]){const shard=mesh(new THREE.TetrahedronGeometry(s,0),brokenPlate,visual,[x,y,z]);shard.rotation.set(rx,.3,rz);shard.scale.set(1,.55,.8);}
+  for(const [x,y,rotation,length] of [[-.17,1.92,.62,.48],[.12,1.72,-.48,.44],[-.08,1.48,.35,.38],[.24,1.35,-.7,.3]]){const crack=mesh(new THREE.BoxGeometry(.035,length,.025),voidMat,visual,[x,y,.55]);crack.rotation.z=rotation;}
+  for(const [x,y,rotation] of [[-.46,1.8,-.5],[-.5,1.53,.25],[.44,1.25,.65]]){const shard=mesh(new THREE.TetrahedronGeometry(.18,0),brokenPlate,visual,[x,y,.12]);shard.rotation.z=rotation;}
+  torso.rotation.z=-.045;const aura=new THREE.PointLight('#55e37d',1.25,7,2);aura.position.set(0,2.1,.3);root.add(aura);root.userData.npc='Calder, the Necromancer';return root;
 }
 
 export function createVillager(kind='merchant') {
