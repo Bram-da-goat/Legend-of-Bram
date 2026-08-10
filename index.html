@@ -1,21 +1,72 @@
 <!doctype html>
 <html lang="en">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#05090c"><title>The Legend of Bram V3</title><link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/battle-dialogue.css"></head>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#101b22">
+  <title>The Legend of Bram V4</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
 <body>
 <main id="game">
-  <canvas id="world" aria-label="The Legend of Bram V3"></canvas><div class="vignette"></div>
-  <header class="hud topbar"><div class="brand"><small>THE LEGEND OF</small><strong>BRAM <i>V3</i></strong></div><div class="location"><small>REGION</small><strong id="location">Meadow of Cinders</strong></div><div class="resources"><span><b id="exp">0</b> EXP</span><span><b id="gold">0</b> GOLD</span><button id="inventoryButton" class="icon-button">PACK</button></div></header>
-  <aside class="hud hero-card"><div class="portrait">B</div><div><small>STONEGUARD</small><strong>Bram</strong><p>Hammer · 65 DMG · 4.8 RNG</p></div></aside>
-  <aside class="hud quest-tracker"><small>ACTIVE QUEST</small><strong id="questTitle">A Stranger in the Meadow</strong><p id="questText">Find the knight at the old altar.</p><div class="quest-progress"><i id="questFill"></i></div><span id="questCount">0 / 1</span></aside>
-  <section id="battleHud" class="hud battle-hud" hidden><div><small id="battleLabel">PREPARATION</small><strong id="battleTimer">15</strong></div><p id="battleObjective">Place Bram away from the pebble path.</p><label>Target<select id="targeting"><option value="first">First</option><option value="strong">Strong</option><option value="last">Last</option></select></label><div class="battle-controls"><button id="startWave" disabled>Start Wave</button><button id="battleSpeed">Speed 1×</button></div></section>
+  <canvas id="world" aria-label="The Legend of Bram V4"></canvas>
+  <div class="vignette"></div>
+
+  <header class="top-hud">
+    <div class="brand"><small>THE LEGEND OF</small><strong>BRAM <i>V4</i></strong></div>
+    <div class="region"><small>LOCATION</small><strong id="location">Meadow of Cinders</strong></div>
+    <div class="wallet"><span><b id="exp">0</b> EXP</span><span><b id="gold">0</b> GOLD</span><button id="inventoryButton">Inventory</button></div>
+  </header>
+
+  <aside class="party-panel">
+    <p class="eyebrow">YOUR HERO</p>
+    <div class="hero-row"><div class="hero-token">B</div><div><h2>Bram</h2><p id="weaponLine">Hammer · 65 DMG · 4.8 RNG · 3.2 AOE</p></div></div>
+    <div class="hero-levels"><span>Damage <b id="damageLevel">0</b></span><span>Range <b id="rangeLevel">0</b></span><span>AOE <b id="aoeLevel">0</b></span></div>
+  </aside>
+
+  <aside class="quest-panel"><p class="eyebrow">ACTIVE QUEST</p><h3 id="questTitle">Ash on the Road</h3><p id="questText">Follow the old road.</p><div class="quest-bar"><i id="questFill"></i></div><small id="questCount">0 / 1</small></aside>
+  <div id="tutorial" class="tutorial" hidden><p class="eyebrow">TUTORIAL</p><h3 id="tutorialTitle">Movement</h3><p id="tutorialText">Move with WASD or the arrow keys.</p></div>
+  <div id="prompt" class="action-prompt" hidden></div>
+  <div id="toast" class="toast" hidden></div>
+
+  <section id="battleHud" class="battle-hud" hidden>
+    <div><small id="battleLabel">PREPARATION</small><strong id="battleTimer">20</strong></div>
+    <p id="battleObjective">Place Bram on open ground.</p>
+    <label>Target<select id="targeting"><option value="first">First</option><option value="strong">Strong</option><option value="last">Last</option></select></label>
+    <button id="startWave" disabled>Start Wave</button><button id="battleSpeed">Speed 1×</button>
+  </section>
   <div id="bossBar" class="boss-bar" hidden><small id="bossName">THE FALLEN KNIGHT</small><div><i id="bossFill"></i></div><span id="bossHp">200 / 200</span></div>
-  <div id="battleDialogue" class="battle-dialogue" hidden><small id="battleSpeaker">SIR CALDER</small><p id="battleWords">Rise, my buried legion!</p></div>
-  <div id="tutorial" class="tutorial" hidden><small>TUTORIAL</small><strong id="tutorialTitle">Movement</strong><p id="tutorialText">Use WASD or the arrow keys to move Bram.</p></div>
-  <div id="prompt" class="prompt" hidden></div><div id="toast" class="toast" hidden></div>
-  <aside id="inventory" class="panel inventory" hidden><header><div><small>BRAM'S PACK</small><h2>Inventory</h2></div><button data-close="inventory">×</button></header><nav><button class="tab active" data-tab="weapons">Weapons</button><button class="tab" data-tab="materials">Materials</button><button class="tab" data-tab="keys">Key Items</button></nav><div id="inventoryGrid" class="inventory-grid"></div></aside>
-  <aside id="serviceMenu" class="panel service" hidden><header><div><small id="serviceType">STARFALL TOWN</small><h2 id="serviceTitle">Village Service</h2></div><button data-close="serviceMenu">×</button></header><div id="serviceContent"></div></aside>
-  <section id="cinematic" class="cinematic" hidden><div class="letterbox top"></div><div class="letterbox bottom"></div><button id="skipCutscene" class="skip">Skip</button><article><small id="speaker">NARRATOR</small><p id="dialogue">Beyond the ash-covered mountains, a lone guardian returns.</p><button id="nextDialogue">Continue</button></article></section>
-  <section id="titleScreen" class="screen title-screen"><div class="title-copy"><p>AN OLD LEGEND · REFORGED</p><h1>The Legend<br><span>of Bram</span></h1><h2>V3 · THE ASHEN OATH</h2><p class="lede">A story-driven tower-defense RPG rebuilt with cinematic visuals, persistent quests, and the complete Meadow of Cinders adventure.</p><div><button id="newGame">New Game</button><button id="continueGame" class="secondary">Continue</button></div><small>WASD move · E interact · Click to place Bram in battle</small></div></section>
-  <section id="ending" class="screen ending" hidden><div><small>CHAPTER ONE COMPLETE</small><h2>The road beyond Starfall opens</h2><p>Bram has broken the necromancer's hold and restored the town's ancient path.</p><button id="continueExploring">Continue Exploring</button></div></section>
-</main><script type="module" src="/src/main.js"></script>
-</body></html>
+  <div id="battleDialogue" class="battle-dialogue" hidden><small id="battleSpeaker">CALDER</small><p id="battleWords"></p></div>
+
+  <section id="cinematic" class="cinematic" hidden>
+    <div class="letterbox top"></div><div class="letterbox bottom"></div>
+    <button id="skipCutscene" class="skip">Skip</button>
+    <article><small id="speaker">NARRATOR</small><p id="dialogue"></p><button id="nextDialogue">Continue</button></article>
+  </section>
+
+  <section id="titleScreen" class="screen title-screen">
+    <div><p class="eyebrow">A HIGH FANTASY ADVENTURE</p><h1>The Legend<br><span>of Bram</span></h1><h2>V4 · THE HOLLOW BELOW</h2><p>Defend the Meadow of Cinders, unmask the false knight, and follow an ancient passage beneath Starfall Town.</p><div class="title-actions"><button id="newGame">New Game</button><button id="continueGame" class="secondary">Load Game</button></div><small>WASD move · E interact · I inventory · Click to place Bram</small></div>
+  </section>
+
+  <aside id="inventory" class="full-panel" hidden>
+    <header><div><p class="eyebrow">BRAM'S PACK</p><h2>Inventory</h2></div><button data-close="inventory">×</button></header>
+    <nav><button class="tab active" data-tab="weapons">Weapons</button><button class="tab" data-tab="materials">Materials</button><button class="tab" data-tab="keys">Key Items</button></nav>
+    <div id="inventoryGrid" class="item-grid"></div>
+  </aside>
+
+  <aside id="serviceMenu" class="full-panel service-panel" hidden>
+    <header><div><p class="eyebrow" id="serviceType">STARFALL SERVICE</p><h2 id="serviceTitle">Shop</h2></div><button data-close="serviceMenu">×</button></header>
+    <nav id="serviceTabs"></nav><div id="serviceContent" class="service-grid"></div><p id="serviceStatus"></p>
+  </aside>
+
+  <aside id="altarMenu" class="full-panel altar-panel" hidden>
+    <header><div><p class="eyebrow">THE AWAKENED ALTAR</p><h2>Spend Experience</h2></div><button data-close="altarMenu">×</button></header>
+    <p>Offer your experience to strengthen Bram. Each blessing becomes more expensive.</p>
+    <div id="altarChoices" class="service-grid"></div>
+  </aside>
+
+  <section id="ending" class="screen ending" hidden><div><p class="eyebrow">V4 CHAPTER COMPLETE</p><h2>The Hollow Below</h2><p>Bram has discovered what stirs beneath Starfall. More is coming.</p><button id="continueExploring">Continue Exploring</button></div></section>
+</main>
+<script type="module" src="./src/v4.js"></script>
+</body>
+</html>
