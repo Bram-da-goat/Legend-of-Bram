@@ -8,15 +8,15 @@
   <link rel="stylesheet" href="./style.css">
 </head>
 <body>
-<main id="game">
-  <canvas id="world" aria-label="The Legend of Bram V4"></canvas>
-  <div class="vignette"></div>
-
+<div class="game-shell">
   <header class="top-hud">
     <div class="brand"><small>THE LEGEND OF</small><strong>BRAM <i>V4</i></strong></div>
     <div class="region"><small>LOCATION</small><strong id="location">Meadow of Cinders</strong></div>
     <div class="wallet"><span><b id="exp">0</b> EXP</span><span><b id="gold">0</b> GOLD</span><button id="inventoryButton">Inventory</button></div>
   </header>
+<main id="game">
+  <canvas id="world" aria-label="The Legend of Bram V4"></canvas>
+  <div class="vignette"></div>
 
   <aside class="party-panel">
     <p class="eyebrow">YOUR HERO</p>
@@ -67,6 +67,7 @@
 
   <section id="ending" class="screen ending" hidden><div><p class="eyebrow">V4 CHAPTER COMPLETE</p><h2>The Hollow Below</h2><p>Bram has discovered what stirs beneath Starfall. More is coming.</p><button id="continueExploring">Continue Exploring</button></div></section>
 </main>
+</div>
 <script type="module" src="./src/v4.js"></script>
 </body>
 </html>

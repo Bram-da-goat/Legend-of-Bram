@@ -2,6 +2,8 @@ node_modules/
 dist/
 release/
 application-release/
+*.exe
+*.blockmap
 *.blend1
 .env
 .env.*
