@@ -11,8 +11,8 @@
 <div class="game-shell">
   <header class="top-hud">
     <div class="brand"><small>THE LEGEND OF</small><strong>BRAM <i>V4</i></strong></div>
-    <div class="region"><small>LOCATION</small><strong id="location">Meadow of Cinders</strong></div>
-    <div class="wallet"><span><b id="exp">0</b> EXP</span><span><b id="gold">0</b> GOLD</span><button id="inventoryButton">Inventory</button></div>
+    <div class="region" hidden><small>LOCATION</small><strong id="location">Meadow of Cinders</strong></div>
+    <div class="wallet" hidden><span><b id="exp">0</b> EXP</span><span><b id="gold">0</b> GOLD</span><button id="inventoryButton" disabled>Inventory</button></div>
   </header>
 <main id="game">
   <canvas id="world" aria-label="The Legend of Bram V4"></canvas>
@@ -45,7 +45,7 @@
   </section>
 
   <section id="titleScreen" class="screen title-screen">
-    <div><p class="eyebrow">A HIGH FANTASY ADVENTURE</p><h1>The Legend<br><span>of Bram</span></h1><h2>V4 · THE HOLLOW BELOW</h2><p>Defend the Meadow of Cinders, unmask the false knight, and follow an ancient passage beneath Starfall Town.</p><div class="title-actions"><button id="newGame">New Game</button><button id="continueGame" class="secondary">Load Game</button></div><small>WASD move · E interact · I inventory · Click to place Bram</small></div>
+    <div><p class="eyebrow">A HIGH FANTASY ADVENTURE</p><h1>The Legend<br><span>of Bram</span></h1><h2>V4 · THE HOLLOW BELOW</h2><p>Defend the Meadow of Cinders, unmask the false knight, and follow an ancient passage beneath Starfall Town.</p><div class="title-actions"><button id="newGame">New Game</button><button id="continueGame" class="secondary">Load Game</button></div><small>WASD move · E interact · Click to place Bram</small></div>
   </section>
 
   <aside id="inventory" class="full-panel" hidden>
