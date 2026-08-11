@@ -6,7 +6,7 @@ import {createBram,setBramWeapon,createGoblin,createOrc,createBat,createRockMons
 
 const $=s=>document.querySelector(s),canvas=$('#world');
 const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;
-const scene=new THREE.Scene();scene.background=new THREE.Color('#9cadb0');scene.fog=new THREE.FogExp2('#9cadb0',.023);
+const scene=new THREE.Scene();scene.background=new THREE.Color('#9cadb0');scene.fog=new THREE.FogExp2('#9cadb0',.018);
 const camera=new THREE.PerspectiveCamera(47,1,.1,140),composer=new EffectComposer(renderer);composer.addPass(new RenderPass(scene,camera));composer.addPass(new OutputPass());
 const sun=new THREE.DirectionalLight('#ffe5c0',3),hemi=new THREE.HemisphereLight('#dbe6df','#1b2521',1.4);sun.position.set(-9,16,8);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=sun.shadow.camera.bottom=-52;sun.shadow.camera.right=sun.shadow.camera.top=52;sun.shadow.camera.far=110;scene.add(sun,hemi);
 const sky=new THREE.Group();scene.add(sky);
@@ -20,8 +20,16 @@ function solid(parent,geometry,material,position){const m=new THREE.Mesh(geometr
 const meadow=zone('meadow',[118,118],'#546b52'),town=zone('town',[66,58],'#4b4640'),smithInterior=zone('smithInterior',[20,16],'#594938'),shopInterior=zone('shopInterior',[20,16],'#594938'),manHouse=zone('manHouse',[20,16],'#594938'),basement=zone('basement',[20,16],'#4a4c46'),cave=zone('cave',[46,92],'#414640'),battle=zone('battle',[48,48],'#546b52');
 zones.meadow.visible=true;
 
-for(let i=0;i<32;i++){const a=i*2.4,r=13+(i*19%100)/100*32,x=Math.cos(a)*r,z=Math.sin(a)*r;if(Math.hypot(x,z)<10||Math.hypot(x,z+13)<8)continue;add(meadow,createTree(.85+(i%3)*.12,i%9===0),x,z,.48);}
-for(let i=0;i<18;i++){const a=i*1.83,r=11+(i*23%100)/100*36,x=Math.cos(a)*r,z=Math.sin(a)*r;if(Math.hypot(x,z)<7)continue;add(meadow,createRock(.28+(i%4)*.12),x,z,.35);}
+for(let i=0;i<32;i++){const a=i*2.4,r=13+(i*19%100)/100*21,x=Math.cos(a)*r,z=Math.sin(a)*r;if(Math.hypot(x,z)<10||Math.hypot(x,z+13)<8)continue;add(meadow,createTree(.85+(i%3)*.12,i%9===0),x,z,.48);}
+for(let i=0;i<18;i++){const a=i*1.83,r=11+(i*23%100)/100*26,x=Math.cos(a)*r,z=Math.sin(a)*r;if(Math.hypot(x,z)<7)continue;add(meadow,createRock(.28+(i%4)*.12),x,z,.35);}
+const mountainColors=['#454b47','#5a5c53','#404943','#625f55'];
+for(let i=0;i<52;i++){
+  const angle=i/52*Math.PI*2,radius=35+(i%5)*.45,x=Math.cos(angle)*radius,z=Math.sin(angle)*radius;
+  const peak=new THREE.Group(),scale=1.35+(i%4)*.18,height=2.5+(i%5)*.28,stone=mat(mountainColors[i%mountainColors.length],.96);
+  const main=part(peak,new THREE.DodecahedronGeometry(2.65,0),stone,[0,3.15*scale,0]);main.scale.set(1.4*scale,height*scale,1.12*scale);main.rotation.set(.04,(i*.73)%Math.PI,.06);
+  const shoulder=part(peak,new THREE.DodecahedronGeometry(1.75,0),stone,[Math.sin(i)*2.7*scale,1.55*scale,Math.cos(i)*1.25]);shoulder.scale.set(1.25,1.35+(i%3)*.2,1.1);shoulder.rotation.y=i*.41;
+  add(meadow,peak,x,z,3.15*scale);
+}
 const grassGeo=new THREE.ConeGeometry(.045,.42,4),grassMat=mat('#405b43',1),grass=new THREE.InstancedMesh(grassGeo,grassMat,120),grassDummy=new THREE.Object3D();for(let i=0;i<120;i++){grassDummy.position.set((rng()-.5)*96,.2,(rng()-.5)*96);grassDummy.rotation.y=rng()*6.28;grassDummy.scale.set(.65+rng()*.55,.65+rng()*.55,.65+rng()*.55);grassDummy.updateMatrix();grass.setMatrixAt(i,grassDummy.matrix);}meadow.add(grass);
 const roadMat=mat('#817565',.98);for(let i=0;i<85;i++){const z=45-i*1.05,x=Math.sin(z*.14)*2.8,stone=createRock(.16+(i%4)*.025);stone.traverse(o=>{if(o.isMesh)o.material=roadMat;});stone.position.set(x,.02,z);stone.scale.y=.28;meadow.add(stone);}
 const lake=new THREE.Mesh(new THREE.CircleGeometry(7.5,48),new THREE.MeshStandardMaterial({color:'#2d7080',roughness:.24,metalness:.06,transparent:true,opacity:.8}));lake.rotation.x=-Math.PI/2;lake.position.set(-23,.03,-16);meadow.add(lake);
@@ -78,7 +86,7 @@ function useMeadowPortal(){if(!game.bossDefeated||!game.keyItems.includes('Telep
 function enterManHouse(){if(!game.keyItems.includes('Key to the Man Cave')){toast('The third house is locked. You need the Key to the Man Cave.');return;}switchZone('manHouse',{x:0,z:5});}
 function useAltar(){if(!game.keyItems.includes('Strange Rune')){toast('A rune-shaped hollow waits in the altar.');return;}townAltar.userData.active=true;townAltar.userData.light.intensity=4;if(game.quest==='awaken_altar')game.quest='enter_man_cave';openAltar();save();}
 
-function blocked(next){const bounds={meadow:[56,56],town:[29.5,25.5],smithInterior:[8.2,6.1],shopInterior:[8.2,6.1],manHouse:[8.2,6.1],basement:[8.2,6.1],cave:[21,44]}[currentZone];if(!bounds)return false;if(Math.abs(next.x)>bounds[0]||Math.abs(next.z)>bounds[1])return true;return zoneColliders[currentZone].some(({object,radius})=>object.visible&&Math.hypot(next.x-object.position.x,next.z-object.position.z)<radius+.48);}
+function blocked(next){const bounds={meadow:[56,56],town:[29.5,25.5],smithInterior:[8.2,6.1],shopInterior:[8.2,6.1],manHouse:[8.2,6.1],basement:[8.2,6.1],cave:[21,44]}[currentZone];if(!bounds)return false;if(currentZone==='meadow'&&Math.hypot(next.x,next.z)>30.5)return true;if(Math.abs(next.x)>bounds[0]||Math.abs(next.z)>bounds[1])return true;return zoneColliders[currentZone].some(({object,radius})=>object.visible&&Math.hypot(next.x-object.position.x,next.z-object.position.z)<radius+.48);}
 function animateWalk(model,time,amount=.58){const rig=model.userData.rig;if(rig?.leftLeg&&rig?.rightLeg){const s=Math.sin(time*10);rig.leftLeg.rotation.x=s*amount;rig.rightLeg.rotation.x=-s*amount;if(rig.visual)rig.visual.position.y=Math.abs(s)*.055;}if(rig?.leftWing){rig.leftWing.rotation.z=.3+Math.sin(time*13)*.7;rig.rightWing.rotation.z=-.3-Math.sin(time*13)*.7;model.position.y=.75+Math.sin(time*4)*.22;}}
 function movePlayer(dt,time){let dx=(keys.has('d')||keys.has('arrowright')?1:0)-(keys.has('a')||keys.has('arrowleft')?1:0),dz=(keys.has('s')||keys.has('arrowdown')?1:0)-(keys.has('w')||keys.has('arrowup')?1:0);if(!dx&&!dz){playerRig.leftLeg.rotation.x=playerRig.rightLeg.rotation.x=0;playerRig.visual.position.y=0;return;}const len=Math.hypot(dx,dz);dx/=len;dz/=len;const next=player.position.clone();next.x+=dx*5.3*dt;next.z+=dz*5.3*dt;if(!blocked(next)){player.position.x=next.x;player.position.z=next.z;}player.rotation.y=THREE.MathUtils.damp(player.rotation.y,Math.atan2(dx,dz),12,dt);animateWalk(player,time,.48);if(game.tutorial==='move'){moveTime+=dt;if(moveTime>1.2){game.tutorial='interact';tutorial('Interaction','Find Sir Calder near the old altar and press E.');save();}}}
 function updatePrompt(){if(state!=='world'){$('#prompt').hidden=true;return;}const target=nearestInteraction();$('#prompt').hidden=!target;if(target)$('#prompt').textContent=`Press E · ${target[0]}`;}
