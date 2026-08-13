@@ -56,6 +56,16 @@ export function createRock(scale=1){const root=new THREE.Group(),rock=part(root,
 export function createPortal(){const root=new THREE.Group(),portalMat=new THREE.MeshBasicMaterial({color:'#7ae7ff',transparent:true,opacity:.78}),ring=part(root,new THREE.TorusGeometry(1.15,.16,10,32),portalMat,[0,.25,0]),core=part(root,new THREE.CircleGeometry(.94,32),new THREE.MeshBasicMaterial({color:'#3557df',transparent:true,opacity:.6,side:THREE.DoubleSide}),[0,.27,0]);ring.rotation.x=core.rotation.x=-Math.PI/2;for(let i=0;i<4;i++){const a=i*Math.PI/2,shard=part(root,new THREE.OctahedronGeometry(.17),portalMat,[Math.cos(a)*1.25,.58,Math.sin(a)*1.25]);shard.userData.orbit=a;}const light=new THREE.PointLight('#7ae7ff',0,8);light.position.y=.5;root.add(light);root.userData={radius:1.5,ring,core,light,active:false};return root;}
 export function createAltar(){const root=new THREE.Group(),stone=mat('#7a746c'),rune=new THREE.MeshBasicMaterial({color:'#68d9ff'});part(root,new THREE.CylinderGeometry(1.7,2.15,.55,8),stone,[0,.3,0]);part(root,new THREE.BoxGeometry(1.2,2.2,1.2),mat('#d6c9ad'),[0,1.35,0]);const crystal=part(root,new THREE.SphereGeometry(.42,12,8),rune,[0,2.7,0]),light=new THREE.PointLight('#68d9ff',0,8);light.position.y=2.7;root.add(light);root.userData={radius:2.05,crystal,light,active:false};return root;}
 export function createBuilding(type='house',wallColor='#756353',roofColor='#6b5548'){const root=new THREE.Group(),walls=box(root,[5.2,2.8,3.8],mat(wallColor),[0,1.4,0]),roof=part(root,new THREE.ConeGeometry(3.8,1.7,4),mat(roofColor),[0,3.65,0]);roof.rotation.y=Math.PI/4;box(root,[1,1.9,.12],mat('#4b3527'),[0,.95,1.96]);for(const x of [-1.45,1.45])box(root,[.72,.68,.1],new THREE.MeshBasicMaterial({color:'#efbd6b'}),[x,1.65,1.97]);root.userData={radius:3.05,type};return root;}
-export function createInterior(type){const root=new THREE.Group(),dark=type==='basement'||type==='cave',floor=mat(dark?'#4a4c46':'#594938'),wall=mat(dark?'#595b55':'#756353'),beam=mat('#443224');box(root,[18,.25,14],floor,[0,-.12,0]);for(const [x,z,sx,sz] of [[0,-7,18,.3],[-9,0,.3,14],[9,0,.3,14]])box(root,[sx,3.6,sz],wall,[x,1.8,z]);for(const x of [-6,-3,0,3,6])box(root,[.18,3.6,.22],beam,[x,1.8,-6.78]);return root;}
+export function createInterior(type){
+  const root=new THREE.Group(),dark=type==='basement'||type==='cave',floor=mat(dark?'#4a4c46':'#594938'),wall=mat(dark?'#595b55':'#756353'),beam=mat('#443224'),ceiling=new THREE.MeshStandardMaterial({color:dark?'#353b3a':'#4f4033',roughness:.96,transparent:true,opacity:.7,depthWrite:false});
+  box(root,[18,.25,14],floor,[0,-.12,0]);
+  box(root,[18,.3,14],ceiling,[0,3.72,0],'Cutaway ceiling');
+  for(const [x,z,sx,sz] of [[0,-7,18,.3],[-9,0,.3,14],[9,0,.3,14]])box(root,[sx,3.6,sz],wall,[x,1.8,z]);
+  for(const [x,sx] of [[-5.25,7.2],[5.25,7.2]])box(root,[sx,3.6,.3],wall,[x,1.8,7]);
+  box(root,[3,1.05,.3],wall,[0,3.08,7]);
+  for(const x of [-6,-3,0,3,6])box(root,[.18,3.6,.22],beam,[x,1.8,-6.78]);
+  for(const x of [-6,6])box(root,[.18,3.6,.22],beam,[x,1.8,6.78]);
+  return root;
+}
 
 export {mat,part,box};

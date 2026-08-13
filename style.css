@@ -31,7 +31,7 @@ canvas{width:100%;height:680px}
 .quest-panel{right:18px;top:22px;width:270px;background:#152d34e8;border-color:#638580;border-left-width:1px}
 .toast{top:20px}.tutorial{top:16%}.action-prompt{bottom:62px}
 .title-screen{display:grid;place-content:center;padding:28px;text-align:center;background:radial-gradient(circle at 50% 34%,#203b3ee8,#0b171ce8);backdrop-filter:blur(4px)}
-.title-screen>div{width:min(520px,90vw)}.title-screen h1{margin:6px 0;color:#fff3d1;font-size:clamp(2.5rem,6vw,4rem);line-height:.9;letter-spacing:-.04em}.title-screen h1 span{font-size:1em;color:#fff3d1}.title-screen h2{margin:13px 0;color:#75d1c1}.title-screen>div>p:not(.eyebrow){margin:0 auto;max-width:430px}.title-actions{justify-content:center;margin:18px 0 12px}
+.title-screen>div{width:min(520px,90vw)}.title-screen h1{margin:6px 0;color:#fff3d1;font-size:clamp(2.5rem,6vw,4rem);line-height:.9;letter-spacing:-.04em}.title-screen h1 span{font-size:1em;color:#fff3d1}.title-screen h2{margin:13px 0;color:#75d1c1}.title-screen>div>p:not(.eyebrow){margin:0 auto;max-width:430px}.title-actions{justify-content:center;margin:18px 0 12px}.controller-hint{display:block;color:#9eb4ad;line-height:1.65}
 .battle-hud{top:18px}.boss-bar{bottom:22px}.battle-dialogue{top:92px}
 .cinematic article{bottom:9%;background:#191d1df2;border-color:#c9b071}.cinematic article small{color:#f1c768}.letterbox{height:8%}
 .full-panel{background:linear-gradient(145deg,#102d35fa,#07191ff8)}
