@@ -1,13 +1,16 @@
 {
   "name": "legend-of-bram-v4",
-  "description": "The Legend of Bram V4 — a browser-based Three.js tower-defense RPG.",
+  "description": "The Legend of Bram: Echoes of Starfall — a storybook browser RPG.",
   "author": "Bram-da-goat",
   "private": true,
+  "type": "module",
   "version": "1.0.0",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host 127.0.0.1 --port 5174 --strictPort",
+    "test": "node --test tests/*.test.mjs",
+    "test:browser": "node tests/smoke.cjs",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview --host 127.0.0.1"
   },
   "devDependencies": {
     "vite": "^7.0.0",

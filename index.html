@@ -1,74 +1,246 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#101b22">
-  <title>The Legend of Bram V4</title>
-  <link rel="stylesheet" href="./style.css">
-</head>
-<body>
-<div class="game-shell">
-  <header class="top-hud">
-    <div class="brand"><small>THE LEGEND OF</small><strong>BRAM <i>V4</i></strong></div>
-    <div class="region" hidden><small>LOCATION</small><strong id="location">Meadow of Cinders</strong></div>
-    <div class="wallet" hidden><span><b id="exp">0</b> EXP</span><span><b id="gold">0</b> GOLD</span><button id="inventoryButton" disabled>Inventory</button></div>
-  </header>
-<main id="game">
-  <canvas id="world" aria-label="The Legend of Bram V4"></canvas>
-  <div class="vignette"></div>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#101b22" />
+    <title>The Legend of Bram · Echoes of Starfall</title>
+    <link rel="stylesheet" href="./style.css" />
+    <link rel="stylesheet" href="./ui.css" />
+  </head>
+  <body>
+    <div class="game-shell">
+      <header class="top-hud">
+        <div class="brand">
+          <small>THE LEGEND OF</small
+          ><strong>BRAM <i>ECHOES OF STARFALL</i></strong>
+        </div>
+        <div class="journey-actions">
+          <button id="inventoryButton">Inventory · I</button>
+          <button id="journalButton">Journal · J</button
+          ><button id="soundButton" class="secondary">Sound on</button>
+        </div>
+        <div class="region" hidden>
+          <small>LOCATION</small
+          ><strong id="location">Meadow of Cinders</strong>
+        </div>
+        <div class="wallet" hidden>
+          <span><b id="exp">0</b> EXP</span><span><b id="gold">0</b> GOLD</span
+          >
+        </div>
+      </header>
+      <main id="game">
+        <canvas
+          id="world"
+          aria-label="The Legend of Bram — storybook adventure"
+        ></canvas>
+        <div class="vignette"></div>
 
-  <aside class="party-panel">
-    <p class="eyebrow">YOUR HERO</p>
-    <div class="hero-row"><div class="hero-token">B</div><div><h2>Bram</h2><p id="weaponLine">Hammer · 65 DMG · 4.8 RNG · 3.2 AOE</p></div></div>
-    <div class="hero-levels"><span>Damage <b id="damageLevel">0</b></span><span>Range <b id="rangeLevel">0</b></span><span>AOE <b id="aoeLevel">0</b></span></div>
-  </aside>
+        <aside class="party-panel">
+          <p class="eyebrow">YOUR HERO</p>
+          <div class="hero-row">
+            <div class="hero-token">B</div>
+            <div>
+              <h2>Bram</h2>
+              <p id="weaponLine">Hammer · 65 DMG · 4.8 RNG · 3.2 AOE</p>
+            </div>
+          </div>
+          <div class="hero-levels">
+            <span>Damage <b id="damageLevel">0</b></span
+            ><span>Range <b id="rangeLevel">0</b></span
+            ><span>AOE <b id="aoeLevel">0</b></span>
+          </div>
+        </aside>
 
-  <aside class="quest-panel"><p class="eyebrow">ACTIVE QUEST</p><h3 id="questTitle">Ash on the Road</h3><p id="questText">Follow the old road.</p><div class="quest-bar"><i id="questFill"></i></div><small id="questCount">0 / 1</small></aside>
-  <div id="tutorial" class="tutorial" hidden><p class="eyebrow">TUTORIAL</p><h3 id="tutorialTitle">Movement</h3><p id="tutorialText">Move with WASD or the arrow keys.</p></div>
-  <div id="placementGuide" class="placement-guide" hidden><b>CLICK HERE</b><span>Place Bram on this open ground.</span></div>
-  <div id="prompt" class="action-prompt" hidden></div>
-  <div id="toast" class="toast" hidden></div>
+        <aside class="quest-panel">
+          <p class="eyebrow">ACTIVE QUEST</p>
+          <h3 id="questTitle">Ash on the Road</h3>
+          <p id="questText">Follow the old road.</p>
+          <div class="quest-bar"><i id="questFill"></i></div>
+          <small id="questCount">0 / 1</small>
+        </aside>
+        <div id="tutorial" class="tutorial" hidden>
+          <p class="eyebrow">TUTORIAL</p>
+          <h3 id="tutorialTitle">Movement</h3>
+          <p id="tutorialText">Move with WASD or the arrow keys.</p>
+        </div>
+        <div id="prompt" class="action-prompt" hidden></div>
+        <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
-  <section id="battleHud" class="battle-hud" hidden>
-    <div><small id="battleLabel">PREPARATION</small><strong id="battleTimer">20</strong></div>
-    <p id="battleObjective">Place Bram on open ground.</p>
-    <label>Target<select id="targeting"><option value="first">First</option><option value="strong">Strong</option><option value="last">Last</option></select></label>
-    <button id="startWave" disabled>Start Wave</button><button id="battleSpeed">Speed 1×</button>
-  </section>
-  <div id="bossBar" class="boss-bar" hidden><small id="bossName">THE FALLEN KNIGHT</small><div><i id="bossFill"></i></div><span id="bossHp">200 / 200</span></div>
-  <div id="battleDialogue" class="battle-dialogue" hidden><small id="battleSpeaker">CALDER</small><p id="battleWords"></p></div>
+        <section id="battleHud" class="battle-hud" hidden>
+          <div>
+            <small id="battleLabel">PREPARATION</small
+            ><strong id="battleTimer">20</strong>
+          </div>
+          <p id="battleObjective">Place Bram on open ground.</p>
+          <label
+            >Target<select id="targeting">
+              <option value="first">First</option>
+              <option value="strong">Strong</option>
+              <option value="last">Last</option>
+            </select></label
+          >
+          <button id="battleInventory">Inventory · I</button>
+          <button id="startWave" disabled>Start Wave · Space</button
+          ><button id="battleSpeed">Speed 1×</button
+          ><button id="rally" disabled>Q · Earthshatter</button
+          ><button id="retreat" class="secondary">Retreat</button>
+        </section>
+        <aside class="wave-intel" aria-label="Wave enemies and drop chances">
+          <h3>Enemy forces</h3><small>WAVE INTELLIGENCE · LOOT PER KILL</small>
+          <div id="waveRoster"></div>
+        </aside>
+        <div id="bossBar" class="boss-bar" hidden>
+          <small id="bossName">THE FALLEN KNIGHT</small>
+          <div><i id="bossFill"></i></div>
+          <span id="bossHp">200 / 200</span>
+        </div>
+        <div id="battleDialogue" class="battle-dialogue" hidden>
+          <small id="battleSpeaker">CALDER</small>
+          <p id="battleWords"></p>
+        </div>
 
-  <section id="cinematic" class="cinematic" hidden>
-    <div class="letterbox top"></div><div class="letterbox bottom"></div>
-    <button id="skipCutscene" class="skip">Skip</button>
-    <article><small id="speaker">NARRATOR</small><p id="dialogue"></p><button id="nextDialogue">Continue</button></article>
-  </section>
+        <section id="cinematic" class="cinematic" hidden>
+          <div class="letterbox top"></div>
+          <div class="letterbox bottom"></div>
+          <button id="skipCutscene" class="skip">Skip</button>
+          <article>
+            <small id="speaker">NARRATOR</small>
+            <p id="dialogue"></p>
+            <button id="nextDialogue">Continue</button>
+          </article>
+        </section>
 
-  <section id="titleScreen" class="screen title-screen">
-    <div><p class="eyebrow">A HIGH FANTASY ADVENTURE</p><h1>The Legend<br><span>of Bram</span></h1><h2>V4 · THE HOLLOW BELOW</h2><p>Defend the Meadow of Cinders, unmask the false knight, and follow an ancient passage beneath Starfall Town.</p><div class="title-actions"><button id="newGame">New Game</button><button id="continueGame" class="secondary">Load Game</button></div><small class="controller-hint">Keyboard: WASD move · E interact · Click to place Bram<br>Controller: Left Stick move · A interact/place · Y start wave</small></div>
-  </section>
+        <section id="titleScreen" class="screen title-screen">
+          <div>
+            <div class="oath-emblem" aria-hidden="true"><svg viewBox="0 0 80 80"><path d="M40 5 68 19v24c0 16-28 31-28 31S12 59 12 43V19Z"/><path d="m25 25 29 0 0 13-29 0Zm12 13h6v23h-6Z"/></svg></div>
+            <p class="eyebrow">AN OATH IS A CHOICE</p>
+            <h1>The Legend<br /><span>of Bram</span></h1>
+            <h2>ECHOES OF STARFALL</h2>
+            <p>
+              Defend the last road. Unmask a false knight. Follow your father’s
+              lost memories into the heart of the Hollow.
+            </p>
+            <div class="title-actions">
+              <button id="newGame">Begin Journey</button
+              ><button id="continueGame" class="secondary">
+                Continue Journey
+              </button>
+            </div>
+            <small
+              >WASD move · Shift run · E interact · J journal<br />Place Bram to
+              defend · Q Earthshatter · X reposition</small
+            >
+          </div>
+        </section>
 
-  <aside id="inventory" class="full-panel" hidden>
-    <header><div><p class="eyebrow">BRAM'S PACK</p><h2>Inventory</h2></div><button data-close="inventory">×</button></header>
-    <nav><button class="tab active" data-tab="weapons">Weapons</button><button class="tab" data-tab="materials">Materials</button><button class="tab" data-tab="keys">Key Items</button></nav>
-    <div id="inventoryGrid" class="item-grid"></div>
-  </aside>
+        <aside id="serviceMenu" class="full-panel service-panel" hidden>
+          <header>
+            <div>
+              <p class="eyebrow" id="serviceType">STARFALL SERVICE</p>
+              <h2 id="serviceTitle">Shop</h2>
+            </div>
+            <button data-close="serviceMenu" aria-label="Close shop or blacksmith">Close · Esc</button>
+          </header>
+          <nav id="serviceTabs"></nav>
+          <div id="serviceContent" class="service-grid"></div>
+          <p id="serviceStatus"></p>
+        </aside>
 
-  <aside id="serviceMenu" class="full-panel service-panel" hidden>
-    <header><div><p class="eyebrow" id="serviceType">STARFALL SERVICE</p><h2 id="serviceTitle">Shop</h2></div><button data-close="serviceMenu">×</button></header>
-    <nav id="serviceTabs"></nav><div id="serviceContent" class="service-grid"></div><p id="serviceStatus"></p>
-  </aside>
+        <aside id="altarMenu" class="full-panel altar-panel" hidden>
+          <header>
+            <div>
+              <p class="eyebrow">THE AWAKENED ALTAR</p>
+              <h2>Spend Experience</h2>
+            </div>
+            <button data-close="altarMenu" aria-label="Close altar">Close · Esc</button>
+          </header>
+          <p id="altarIntro">
+            Offer your experience to strengthen Bram. Each blessing becomes more
+            expensive.
+          </p>
+          <div id="altarChoices" class="service-grid"></div>
+        </aside>
 
-  <aside id="altarMenu" class="full-panel altar-panel" hidden>
-    <header><div><p class="eyebrow">THE AWAKENED ALTAR</p><h2>Spend Experience</h2></div><button data-close="altarMenu">×</button></header>
-    <p>Offer your experience to strengthen Bram. Each blessing becomes more expensive.</p>
-    <div id="altarChoices" class="service-grid"></div>
-  </aside>
-
-  <section id="ending" class="screen ending" hidden><div><p class="eyebrow">V4 CHAPTER COMPLETE</p><h2>The Hollow Below</h2><p>Bram has discovered what stirs beneath Starfall. More is coming.</p><button id="continueExploring">Continue Exploring</button></div></section>
-</main>
-</div>
-<script type="module" src="./src/v4.js"></script>
-</body>
+        <aside id="journal" class="full-panel journal-panel" hidden>
+          <header>
+            <div>
+              <p class="eyebrow">THE STONEGUARD CHRONICLE</p>
+              <h2>Your Journey</h2>
+            </div>
+            <button data-close="journal" aria-label="Close journal">Close · Esc</button>
+          </header>
+          <div class="journal-overview">
+            <article>
+              <small>THE ROAD AHEAD</small>
+              <p id="journalQuest"></p>
+            </article>
+            <article>
+              <small>OREN’S SUPPLY CONTRACT</small>
+              <p id="journalContract"></p>
+            </article>
+          </div>
+          <h3>Echoes of a forgotten oath</h3>
+          <p id="journalEnding"></p>
+          <div id="journalEchoes" class="lore-grid"></div>
+          <details class="field-guide">
+            <summary>Field guide & controls</summary>
+            <p>
+              WASD / arrows: move. Shift: run. E: interact. J: journal. Escape:
+              close menus. Battles: click clear ground to place Bram; Space
+              starts the wave. Q Earthshatter hits and stuns the leading pack
+              anywhere on the road. X gives one paused reposition per battle.
+              Use bends to hit enemies repeatedly.
+            </p>
+            <p>
+              Hammer: balanced reach. Axe: quick, narrow slashes and tree
+              harvesting. Club: slow, powerful, huge AOE. Equip weapons from
+              your inventory outside combat or during preparation. Goblins drop bones (10%); orcs
+              drop tusks (25%); bats drop wings (30%) and extremely rare Vampire
+              Shards (0.099%). Enemies return after you leave a cleared site
+              alone for a while.
+            </p>
+          </details>
+          <div class="save-tools">
+            <button id="exportSave">Export save backup</button
+            ><label class="import-button"
+              >Restore backup<input
+                id="importSave"
+                type="file"
+                accept="application/json,.json" /></label
+            ><small
+              >Autosaves keep your journey here. Export a copy to move it
+              between browsers or computers.</small
+            >
+          </div>
+        </aside>
+        <section id="battleResult" class="screen result-screen" hidden>
+          <article>
+            <p class="eyebrow">THE ROAD REMEMBERS</p>
+            <h2 id="resultTitle"></h2>
+            <p id="resultText"></p>
+            <p id="resultLoot"></p>
+            <div class="title-actions">
+              <button id="resultRetry">Try Again</button
+              ><button id="resultContinue">Return to Adventure</button>
+            </div>
+          </article>
+        </section>
+      </main>
+    </div>
+    <section id="inventoryMenu" class="inventory-menu" hidden aria-label="Bram's inventory">
+      <header><div><small>BRAM’S PACK</small><h2>Inventory</h2></div><button data-close="inventoryMenu">Close · Esc</button></header>
+      <nav><button data-inventory-tab="weapons">Weapons</button><button data-inventory-tab="materials">Materials</button><button data-inventory-tab="keys">Key Items</button></nav>
+      <p id="inventoryHint"></p><div id="inventoryGrid" class="inventory-grid"></div>
+    </section>
+    <section id="bootError" class="recovery-screen" hidden>
+      <article>
+        <p class="eyebrow">THE LEGEND OF BRAM</p>
+        <h2 id="bootTitle">The adventure paused</h2>
+        <p id="bootMessage"></p>
+        <button id="reloadGame">Reload game</button>
+      </article>
+    </section>
+    <script type="module" src="./src/main.js"></script>
+  </body>
 </html>

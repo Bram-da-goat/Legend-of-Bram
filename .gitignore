@@ -7,3 +7,4 @@ application-release/
 *.blend1
 .env
 .env.*
+tests/artifacts/
