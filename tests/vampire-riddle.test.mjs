@@ -14,6 +14,6 @@ test('riddle requires starting quest, resets mistakes, and preserves partial pro
 test('night supplies unlock only after riddle and share contract progress',()=>{
  const g=fresh();assert.equal(claimContract(g,'vampire'),false);
  g.vampireRiddleSolved=true;assert.equal(claimContract(g,'vampire'),true);
- assert.equal(g.gold,180);assert.deepEqual(g.materials,{Wood:8,'Goblin Bone':0,'Orc Tusk':0,'Bat Wing':3});
+ assert.equal(g.gold,180);assert.deepEqual(g.materials,{Wood:8,'Goblin Bone':0,'Orc Tusk':0,'Bat Wing':25});
  assert.equal(claimContract(g),false);
 });

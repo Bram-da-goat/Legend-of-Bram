@@ -1,4 +1,6 @@
 import { itemArt } from "./item-art.js";
+import { createSoundEngine } from "./audio.js";
+import {newBloodBattle,grantBloodDamage,bloodBat} from './blood-bats.mjs';
 import { createBattleEnvironment, usesTunnelArena, ROCK_HEALTH } from "./battle-environment.js";
 import { CAVE_SPAWNS, respawnDelay, caveBandAllowed } from "./cave-encounters.mjs";
 import { createQuestDefinitions, createStoryBook } from "./story.js";
@@ -11,6 +13,8 @@ import {
   extensions,
   restore,
   weaponStats,
+  vampireTrade,
+  VAMPIRE_PATHS,vampireLevelCost,upgradeVampire,vampireStats,
   altarMultiplier,
   nextAltarPercent,
   enemyLoot, awardSkeleton, SHARD_SUMMON,
@@ -419,7 +423,6 @@ box(riddleChalice,[.9,1,.9],mat('#595160'),[0,.5,0]);
 part(riddleChalice,new THREE.CylinderGeometry(.35,.14,.4,12,1,true),mat('#c1a566',.5,.6),[0,1.3,0]);
 add(vampireCave,riddleChalice,4,3,.6);
 riddleChalice.visible=false;
-const riddleClues='The bronze bell waits in the western meadow. Seek the brazier in the Marrow King’s secret skeleton chamber, then return to the chalice in my refuge.';
 function syncRiddleObjects() {
   for(const object of [riddleBell,riddleBrazier,riddleChalice]) object.visible=Boolean(game.vampireRiddleStarted);
   riddleFlame.visible=game.vampireRiddleStarted && game.vampireRiddleStep<2;
@@ -512,6 +515,10 @@ for (const [x, z] of [
 }
 
 const player = createBram();
+const vampireCompanion = createVampire();
+vampireCompanion.visible=false;
+let vampireAttackCooldown=0;
+let bloodBattle=newBloodBattle();
 meadow.add(player);
 const playerRig = player.userData.rig;
 focuses.player = player;
@@ -624,6 +631,7 @@ function zoneLabel(z) {
   );
 }
 function updateHUD() {
+  $('#vampireParty').hidden=!game.vampireRecruited;
   syncRiddleObjects();
   const q = questDefs[game.quest] || questDefs.complete,
     value = typeof q[2] === "function" ? q[2]() : q[2],
@@ -759,6 +767,7 @@ function resolveFocus(name) {
   return parent.visible ? focus : player;
 }
 function showCutsceneLine() {
+  playSound('dialogue');
   const [speaker, text, focus, style] = cutsceneLines[cutsceneIndex];
   $("#speaker").textContent = speaker;
   $("#dialogue").textContent = text;
@@ -787,6 +796,7 @@ $("#nextDialogue").onclick = advanceCutscene;
 $("#skipCutscene").onclick = endCutscene;
 
 function switchZone(name, position, withScene = true) {
+  if(name!==currentZone) playSound(name.includes('Interior') || name==='manHouse' ? 'door' : ['cellar','cave','vampireRuin'].includes(name) ? 'stairs' : 'portal');
   for (const [key, group] of Object.entries(zones))
     group.visible = key === name;
   currentZone = name;
@@ -1041,6 +1051,7 @@ function animateWalk(model, time, amount = 0.58) {
 }
 
 function movePlayer(dt, time) {
+  const previousPosition = player.position.clone();
   let dx =
       Number(keys.has("d") || keys.has("arrowright")) -
       Number(keys.has("a") || keys.has("arrowleft")),
@@ -1072,6 +1083,10 @@ function movePlayer(dt, time) {
     dt,
   );
   animateWalk(player, time, 0.48);
+  if(player.position.distanceToSquared(previousPosition)>.00001 && time-lastFootstep>(keys.has('shift')?.24:.36)) {
+    lastFootstep=time;
+    playSound(currentZone==='meadow'?'grass':currentZone.includes('Interior') || currentZone==='manHouse'?'wood':'stone');
+  }
   if (game.tutorial === "move") {
     moveTime += dt;
     if (moveTime > 1.2) {
@@ -1214,6 +1229,9 @@ function resetBramPose() {
   pendingAttack = null;
 }
 function clearBattle() {
+  for(const bat of bloodBattle.bats)disposeEffect(bat.model);
+  bloodBattle=newBloodBattle();
+  vampireCompanion.removeFromParent();vampireCompanion.visible=false;vampireAttackCooldown=0;
   for (const e of enemies) disposeEffect(e.model);
   enemies = [];
   bossEnemy = null;
@@ -1384,8 +1402,9 @@ canvas.addEventListener("pointerdown", (event) => {
     if(game.extinguishedLanterns.includes(lanternId)) toast('This lantern is already extinguished.');
     else if(extinguishLantern(game,lanternId)) {
       battleEnvironment.syncLanterns(game.extinguishedLanterns);save();
-      toast(vampirePassageOpen(game)?'All four lights are out. Walk into the mountain directly north of the meadow to find the vampire’s refuge.':`Lantern extinguished · ${game.extinguishedLanterns.length}/4`,6000);
-    } else toast('You need a Vampire Shard in your inventory to extinguish this lantern.');
+      toast('The flame fades.',3000);
+      playSound('brazier');
+    } else toast('Nothing happens.');
     return;
   }
   if(battleState !== 'prepare') return;
@@ -1399,6 +1418,7 @@ canvas.addEventListener("pointerdown", (event) => {
   player.position.set(p.x, 0, p.z);
   player.visible = true;
   placed = true;
+  playSound('place');
   $("#startWave").disabled = false;
   $("#tutorial").hidden = true;
   $("#battleObjective").textContent =
@@ -1411,6 +1431,7 @@ function beginWave() {
     return;
   }
   battleState = "combat";
+  playSound('wave');
   $("#startWave").hidden = true;
   $("#tutorial").hidden = true;
   if (resumingWave) {
@@ -1606,12 +1627,13 @@ function startAttack(time) {
     target.model.position.z - player.position.z,
   );
   attackTime = 0.001;
+  playSound('swing');
 }
 function updateAttack(dt) {
   if (attackTime <= 0 || !pendingAttack) return;
   attackTime += dt;
   const p = Math.min(1, attackTime / pendingAttack.stats.animation),
-    axe = game.equipped === "Woodcutter Axe";
+    axe = game.equipped === "Woodcutter Axe" || game.equipped === 'Vampire Sword';
   attackPose(player, p, axe);
   if (p >= 0.58 && !pendingAttack.applied) {
     pendingAttack.applied = true;
@@ -1624,17 +1646,18 @@ function updateAttack(dt) {
         enemy.model.visible &&
         enemy.model.position.distanceTo(impact) < pendingAttack.stats.aoe
       ) {
-        enemy.hp -= pendingAttack.stats.damage;
+        damageEnemy(enemy,pendingAttack.stats.damage);
         enemy.hitFlash = 0.12;
       }
     if (axe) slashEffect(impact);
     else crackEffect(impact, pendingAttack.stats.aoe > 4);
     impactDust(impact, axe ? "#dce9cf" : "#d2ad74", axe ? 8 : 20);
-    playSound(axe ? "slash" : "hit");
+    playSound(axe ? "slash" : game.equipped==='Orc War Club' ? 'club' : 'hammer');
   }
   if (p >= 1) resetBramPose();
 }
 function killEnemy(enemy) {
+  playSound(['goblin','orc','bat','rock','undead'].includes(enemy.type)?enemy.type:'boss');
   const preserveKnight = enemy === bossEnemy && bossStage === "knight";
   if (preserveKnight) {
     focuses.battleBoss = enemy.model;
@@ -1644,9 +1667,11 @@ function killEnemy(enemy) {
   const reward = enemyLoot(game, enemy.type);
   if(reward.summonConsumed) toast('Summoning Sigil consumed · Vampire Shard guaranteed');
   game.exp += reward.exp;
+  if(game.vampireRecruited)game.vampireExp+=reward.exp;
   for (const [item, n] of Object.entries(reward.items)) {
     game.materials[item] = (game.materials[item] || 0) + n;
     toast(`${item} +${n}`);
+    playSound(item==='Vampire Shard'?'shard':'loot');
   }
   if (enemy.type === "goblin") game.goblins++;
   if (enemy.type === "bat") game.stats.bats++;
@@ -1688,7 +1713,7 @@ function finishEncounter() {
         ? 180
         : 50;
   if (encounter.type === 'skeleton') awardSkeleton(game);
-  else if (secret) awardSentinel(game);
+  else if (secret) {if(awardSentinel(game) && game.vampireRecruited)game.vampireExp+=500;}
   else game.gold += reward;
   game.wins++;
   game.tutorial = "done";
@@ -1762,6 +1787,7 @@ function updateBoss(dt) {
   } else if (bossStage === "necro" && !bossEnemy && !enemies.length) {
     game.bossDefeated = true;
     game.exp += 1500;
+    if(game.vampireRecruited)game.vampireExp+=1500;
     game.gold += 1000;
     game.wins++;
     game.tutorial = "done";
@@ -1782,6 +1808,7 @@ function updateBoss(dt) {
   }
 }
 function updateBattle(dt, time) {
+  updateVampireCompanion(dt,time);
   if (battleState === "result") return;
   updateRange();
   if (battleState === "prepare") {
@@ -1797,7 +1824,8 @@ function updateBattle(dt, time) {
   $("#rally").textContent =
     abilityCooldown > 0
       ? `Q · ${Math.ceil(abilityCooldown)}s`
-      : "Q · Earthshatter";
+      : game.equipped==='Vampire Sword' ? "Q · Blood Sucker" : "Q · Earthshatter";
+  updateBloodBats(dt,time);
   if (battleDialogueTimer > 0) {
     battleDialogueTimer -= dt;
     if (battleDialogueTimer <= 0) $("#battleDialogue").hidden = true;
@@ -1862,11 +1890,13 @@ function updateBattle(dt, time) {
 }
 
 function openMenu(id) {
+  if($(id).hidden) playSound('open');
   if (state !== "menu") menuReturnState = state;
   state = "menu";
   $(id).hidden = false;
 }
 function closeMenu(id) {
+  playSound('close');
   $(id).hidden = true;
   state = menuReturnState === "cutscene" ? "world" : menuReturnState;
 }
@@ -1908,7 +1938,7 @@ function renderInventory() {
     cell.classList.toggle("equipped",inventoryTab==="weapons"&&game.equipped===name);
     cell.onclick=()=>{
       if(inventoryTab!=="weapons" || combat || !game.weapons.includes(name)) return;
-      game.equipped=name;resetBramPose();updateHUD();updateRange();save();renderInventory();
+      game.equipped=name;playSound('equip');resetBramPose();updateHUD();updateRange();save();renderInventory();
     };
   }
 }
@@ -1945,7 +1975,7 @@ function service(title, type, tabs, content) {
   openMenu("#serviceMenu");
 }
 function card(name, text, button, id, disabled = false) {
-  const icons = {buyWood:'Wood',buyBone:'Goblin Bone',buyTusk:'Orc Tusk',buyRune:'Strange Rune',buyKey:'Key to the Man Cave',craftAxe:'Woodcutter Axe',craftClub:'Orc War Club',contractVampire:'Bat Wing'};
+  const icons = {vampireSword:'Vampire Sword',recruitVampire:'Vampire Shard',buyWood:'Wood',buyBone:'Goblin Bone',buyTusk:'Orc Tusk',buyRune:'Strange Rune',buyKey:'Key to the Man Cave',craftAxe:'Woodcutter Axe',craftClub:'Orc War Club',contractVampire:'Bat Wing'};
   const available=affordability(game,id);
   disabled ||= available.owned || available.short;
   const message=available.short ? `You do not have enough to ${available.verb} this item` : '';
@@ -2017,7 +2047,7 @@ function openShop() {
         ) +
         (game.vampireRiddleSolved ? card(
           'Supplies of the old blood',
-          'Alternative reward: 180 gold, 3 Bat Wings and 8 Wood only. Costs the same three victories; choose one reward per contract.',
+          'Alternative reward: 180 gold, 25 Bat Wings and 8 Wood only. Costs the same three victories; choose one reward per contract.',
           'Collect night supplies','contractVampire',game.wins < (game.contracts+1)*3,
         ) : '') +
         card(
@@ -2112,6 +2142,16 @@ function openBlacksmith() {
 }
 
 function serviceAction(id) {
+  if(id.startsWith('vampire-level-')) {
+    if(upgradeVampire(game,id.slice(14))){save();playSound('level');}else playSound('error');
+    openVampireUpgrades();return;
+  }
+  if(id==='vampireSword' || id==='recruitVampire') {
+    if(!vampireTrade(game,id,currentZone)) {playSound('error');toast('You do not have enough, or already own this reward.');return;}
+    playSound(id==='vampireSword'?'craft':'reward');
+    toast(id==='vampireSword'?'Vampire Sword crafted and equipped.':'Vrykólakas has joined your party.');
+    updateHUD();save();openVampireService();return;
+  }
   if(id === "viewInventory") { closeMenu("#serviceMenu");openInventory();return; }
   let ok = false;
   if (id.startsWith("buy")) ok = buy(game, id);
@@ -2127,19 +2167,92 @@ function serviceAction(id) {
     }
   }
   if (!ok) {
+    playSound('error');
     toast(id.startsWith("buy") ? "You do not have enough to buy this item" : id.startsWith("craft") || id === "forge" ? "You do not have enough to craft this item" : "Check your gold, materials, or contract progress.");
     return;
   }
-  playSound("reward");
+  playSound(id.startsWith('buy')?'buy':id.startsWith('equip-')?'equip':id.startsWith('craft') || id==='forge'?'craft':'reward');
   toast(
     id.startsWith("equip-")
       ? "Weapon equipped."
-      : id==='contractVampire' ? 'Night supplies · +180 Gold · +3 Bat Wings · +8 Wood' : "Saved · purchase or upgrade complete.",
+      : id==='contractVampire' ? 'Night supplies · +180 Gold · +25 Bat Wings · +8 Wood' : "Saved · purchase or upgrade complete.",
   );
   updateHUD();
   save();
   if (currentZone === "shopInterior") openShop();
   else openBlacksmith();
+}
+function openVampireService() {
+  if(currentZone!=='vampireRuin') return;
+  service('Vrykólakas','Pacts of the first night',[{id:'pacts',name:'Vampire pacts'}],{pacts:()=>
+    `<p>You carry ${game.materials['Vampire Shard']||0} Vampire Shards and ${game.materials['Bat Wing']||0} Bat Wings. Each offer consumes its own shard.</p>`+
+    card('Vampire Sword','200 damage · 4 range · 2 AOE · every 0.39 seconds. Summons bats every 3 seconds. Blood Sucker empowers their health.',game.weapons.includes('Vampire Sword')?'Owned':'Craft · 1 Vampire Shard + 500 Bat Wings + 3,000 gold','vampireSword')+
+    card('Recruit Vrykólakas','Joins Bram in battle after placement. Blood magic: 90 damage, 6 range, every 1.2 seconds.',game.vampireRecruited?'Recruited':'Recruit · 1 Vampire Shard','recruitVampire')
+  });
+}
+function updateVampireCompanion(dt,time) {
+  vampireCompanion.visible=Boolean(game.vampireRecruited && placed && player.visible && battleState!=='result');
+  if(!vampireCompanion.visible) return;
+  if(vampireCompanion.parent!==battle) battle.add(vampireCompanion);
+  vampireCompanion.position.copy(player.position).add(new THREE.Vector3(.9,0,.7));
+  vampireAttackCooldown=Math.max(0,vampireAttackCooldown-dt);
+  vampireCompanion.position.y=.06+Math.sin(time*2)*.04;
+  if(battleState!=='combat') return;
+  const stats=vampireStats(game);
+  const target=enemies.filter(e=>e.t>=0 && e.hp>0 && e.model.visible && e.model.position.distanceTo(vampireCompanion.position)<stats.range).sort((a,b)=>b.t-a.t)[0];
+  if(!target) return;
+  vampireCompanion.rotation.y=Math.atan2(target.model.position.x-vampireCompanion.position.x,target.model.position.z-vampireCompanion.position.z);
+  if(vampireAttackCooldown>0) return;
+  vampireAttackCooldown=stats.cooldown;
+  for(const enemy of enemies)if(enemy.hp>0 && enemy.t>=0 && enemy.model.visible && enemy.model.position.distanceTo(target.model.position)<=stats.aoe){damageEnemy(enemy,stats.damage);enemy.hitFlash=.15;enemy.stun=Math.max(enemy.stun||0,stats.stun);}
+  const rank=game.vampirePaths.blood;
+  const beam=new THREE.Mesh(new THREE.CylinderGeometry(.035+rank*.015,.035+rank*.015,1,6),new THREE.MeshBasicMaterial({color:['#eb3268','#ee2953','#f33b56','#ff4860','#ff6375','#ffa0b0'][rank],transparent:true,opacity:.8}));
+  if(rank>0)impactDust(target.model.position,'#eb3268',4+rank*3);
+  const from=vampireCompanion.position.clone().add(new THREE.Vector3(0,1.2,0)),to=target.model.position.clone().add(new THREE.Vector3(0,.8,0));
+  beam.position.copy(from).add(to).multiplyScalar(.5);beam.scale.y=from.distanceTo(to);
+  beam.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),to.clone().sub(from).normalize());
+  battle.add(beam);effects.push({mesh:beam,age:0,lifetime:.2});playSound('slash');
+}
+function damageEnemy(enemy,amount) {
+  const actual=Math.min(Math.max(0,enemy.hp),amount);
+  enemy.hp-=actual;grantBloodDamage(bloodBattle,actual);
+}
+function updateBloodBats(dt,time) {
+  if(battleState!=='combat')return;
+  if(game.equipped==='Vampire Sword' && placed) {
+    bloodBattle.clock+=dt;
+    if(bloodBattle.clock>=3){
+      bloodBattle.clock-=3;
+      const bat=bloodBat(bloodBattle);bat.model=createBat();bat.model.position.copy(pathCurve.getPointAt(1));
+      tintUnit(bat.model,'#c92854');battle.add(bat.model);bloodBattle.bats.push(bat);
+      impactDust(bat.model.position,'#cf1646',20);playSound('bat');
+    }
+  }
+  for(let i=bloodBattle.bats.length-1;i>=0;i--){
+    const bat=bloodBattle.bats[i],old=bat.t;
+    bat.t=Math.max(0,bat.t-.048*dt);
+    bat.model.position.copy(pathCurve.getPointAt(bat.t));
+    const ahead=pathCurve.getPointAt(Math.max(0,bat.t-.01));
+    bat.model.rotation.y=Math.atan2(ahead.x-bat.model.position.x,ahead.z-bat.model.position.z);
+    animateWalk(bat.model,time+i);
+    const hit=enemies.filter(e=>e.hp>0 && e.t>=0 && e.t<=1 && e.t>=bat.t-.006 && e.t<=old+.006).sort((a,b)=>b.t-a.t)[0];
+    if(hit || bat.t===0){
+      if(hit){damageEnemy(hit,500);hit.hitFlash=.15;}
+      impactDust(bat.model.position,'#cf1646',20);disposeEffect(bat.model);bloodBattle.bats.splice(i,1);
+    }
+  }
+  bloodBattle.active=Math.max(0,bloodBattle.active-dt);
+}
+function openVampireUpgrades(){
+  if(!game.vampireRecruited || !['world','battle','menu'].includes(state))return;
+  const descriptions={blood:'Each rank adds 40 damage and 0.45 blood-burst radius. Rank V: 290 damage, 2.65 AOE.',night:'Each rank adds 0.6 range and attacks 0.12 seconds faster. Rank V: 9 range, 0.6-second attacks.',vitality:'Each rank adds 0.25 seconds of binding stun to every hit. Rank V: binds enemies for 1.25 seconds.'};
+  service('Vrykólakas','Choose a path · finish its five ranks before another',[{id:'vampireUpgrades',name:'Vampire paths'}],{vampireUpgrades:()=>
+    `<p>Available EXP: ${game.vampireExp.toLocaleString()} · Earns EXP alongside Bram after recruitment.</p>`+
+    Object.entries(VAMPIRE_PATHS).map(([key,name])=>{
+      const level=game.vampirePaths[key],locked=Object.entries(game.vampirePaths).some(([k,n])=>k!==key&&n>0&&n<5);
+      return card(`${name} · ${level}/5`,descriptions[key],level===5?'Complete':locked?'Finish your current path':`Upgrade · ${vampireLevelCost(game,key)} EXP`,'vampire-level-'+key,level===5||locked||game.vampireExp<vampireLevelCost(game,key));
+    }).join('')
+  });
 }
 function upgradeCost() {
   return (
@@ -2168,7 +2281,7 @@ function openAltar() {
         if (game.exp < c) return;
         game.exp -= c;
         game.upgrades[kind]++;
-        playSound("reward");
+        playSound("level");
         updateHUD();
         save();
         openAltar();
@@ -2262,36 +2375,22 @@ let rangeDisc = null,
 const discoveries = [],
   harvestTrees = [],
   worldMotes = [];
-let soundEnabled = true,
-  audioContext = null;
+let soundEnabled = true, lastFootstep = -Infinity;
+const soundEngine = createSoundEngine();
 try {
   soundEnabled = localStorage.getItem("bram-sound") !== "off";
 } catch {}
+soundEngine.setEnabled(soundEnabled);
+document.addEventListener('pointerdown',()=>soundEngine.unlock(),{capture:true});
+document.addEventListener('keydown',()=>soundEngine.unlock(),{capture:true});
+document.addEventListener('click',event=>{
+  const button=event.target.closest('button');
+  if(button && !button.disabled && button.id!=='soundButton') playSound(button.getAttribute('aria-disabled')==='true'?'error':'click');
+});
+document.addEventListener('change',event=>{if(event.target.matches('select,input[type="range"]')) playSound('click');});
 const sentinelSeal = new THREE.Group();
 function playSound(kind) {
-  if (!soundEnabled) return;
-  try {
-    audioContext ??= new (window.AudioContext || window.webkitAudioContext)();
-    if (audioContext.state === "suspended") audioContext.resume();
-    const o = audioContext.createOscillator(),
-      g = audioContext.createGain(),
-      now = audioContext.currentTime;
-    o.type = kind === "reward" ? "sine" : "triangle";
-    o.frequency.setValueAtTime(
-      kind === "reward" ? 520 : kind === "slash" ? 240 : 95,
-      now,
-    );
-    o.frequency.exponentialRampToValueAtTime(
-      kind === "reward" ? 920 : 45,
-      now + 0.16,
-    );
-    g.gain.setValueAtTime(0.055, now);
-    g.gain.exponentialRampToValueAtTime(0.001, now + 0.23);
-    o.connect(g);
-    g.connect(audioContext.destination);
-    o.start(now);
-    o.stop(now + 0.25);
-  } catch {}
+  soundEngine.play(kind);
 }
 function story(speaker, text, focus = "player", done = () => {}) {
   cutscenes.conversation = [[speaker, text, focus, "push"]];
@@ -2512,6 +2611,7 @@ function initializeAdventure() {
   };
   $("#soundButton").onclick = () => {
     soundEnabled = !soundEnabled;
+    soundEngine.setEnabled(soundEnabled);
     try {
       localStorage.setItem("bram-sound", soundEnabled ? "on" : "off");
     } catch {}
@@ -2520,6 +2620,7 @@ function initializeAdventure() {
   };
   $("#soundButton").textContent = soundEnabled ? "Sound on" : "Sound off";
   $("#rally").onclick = earthshatter;
+  $('#vampireParty').onclick=openVampireUpgrades;
   $("#retreat").onclick = () => {
     if (
       state === "battle" &&
@@ -2598,28 +2699,28 @@ function syncDiscoveries() {
 }
 function riddleInteractions() {
   if(!game.vampireRiddleStarted) return [];
-  return [['Ring the bronze bell',riddleBell,'bell'],['Extinguish the brazier',riddleBrazier,'brazier'],['Touch the empty chalice',riddleChalice,'chalice']]
+  return [['Bronze bell',riddleBell,'bell'],['Brazier',riddleBrazier,'brazier'],['Empty chalice',riddleChalice,'chalice']]
     .filter(([,obj])=>obj.visible && obj.parent===zones[currentZone])
     .map(([label,obj,action])=>[label,obj,()=>{
       const result=advanceVampireRiddle(game,action);syncRiddleObjects();save();
+      playSound(action);
       if(result==='solved') {
         playSound('reward');
-        story('THE VAMPIRE','You remembered the order. Oren’s contracts now offer night supplies: only gold, Bat Wings, and Wood. Walk through the far-left corner behind me, where the walls meet. Seek Vrykólakas in the ruin below.','vampire');
-      } else toast(result==='wrong'?'The rite rejects the order. The brazier rekindles; begin again with the bell.':result==='complete'?'The rite is complete. The refuge’s far-left corner is open.':`The rite answers · ${game.vampireRiddleStep}/3`,5000);
-      if(action==='bell' && result==='correct') playSound('reward');
+        story('THE VAMPIRE','The old pact remembers you. A debt long forgotten is yours at last.','vampire');
+      } else toast(result==='wrong'?'Only silence answers.':result==='complete'?'Stone and blood remember.':'A distant resonance.',3000);
     }]);
 }
 function extraInteractions() {
   if(currentZone==='vampireRuin') return [
     ['Climb back to the refuge',ruinExit,()=>switchZone('vampireCave',{x:-4,z:-5},false)],
-    ['Speak to Vrykólakas',vrykolakas,()=>{game.metVrykolakas=true;save();story('VRYKÓLAKAS','I am Vrykólakas, keeper of the first night. You silenced the lanterns, remembered our rite, and passed through stone. These halls were ancient before Starfall had a name. Rest, Bram. The old blood has been waiting for you.','vrykolakas');}],
+    ['Speak to Vrykólakas',vrykolakas,()=>{game.metVrykolakas=true;save();story('VRYKÓLAKAS','Offer a shard, and my blade or my oath is yours. Each pact has its price.','vrykolakas',openVampireService);}],
   ];
   if(currentZone==='vampireCave') return [
     ...riddleInteractions(),
     ['Return to the meadow',vampireExit,()=>switchZone('meadow',{x:0,z:-25},false)],
     ['Speak to the vampire',vampireNPC,()=>{
       game.vampireRiddleStarted=true;syncRiddleObjects();save();
-      story('THE VAMPIRE',game.vampireRiddleSolved?'The rite is complete. Oren now offers night supplies: gold, Bat Wings, and Wood. Walk through the far-left corner behind me, where the two old walls meet. Vrykólakas waits below.':VAMPIRE_RIDDLE+' '+riddleClues+' A mistake begins the rite anew.','vampire');
+      story('THE VAMPIRE',game.vampireRiddleSolved?'The old pact remembers you.':VAMPIRE_RIDDLE,'vampire');
     }],
   ];
   if(currentZone === 'ossuary') return [
@@ -2634,6 +2735,7 @@ function extraInteractions() {
       d.marker,
       () => {
         if (!findEcho(game, d.id)) return;
+        if(game.vampireRecruited)game.vampireExp+=d.exp;
         syncDiscoveries();
         playSound("reward");
         save();
@@ -2657,7 +2759,7 @@ function extraInteractions() {
             game.harvested[tree.userData.treeId] = Date.now() + 45000;
             tree.visible = false;
             tree.userData.stump.visible = true;
-            playSound("hit");
+            playSound("chop");
             toast("Wood +1");
             save();
           },
@@ -2686,7 +2788,7 @@ function extraInteractions() {
 function openJournal() {
   const q = questDefs[game.quest] || questDefs.complete;
   $("#journalQuest").textContent = q[0] + " — " + q[1];
-  if(game.vampireRiddleStarted) $('#journalQuest').textContent += game.vampireRiddleSolved ? '\nThe old blood’s rite: complete. Night supplies unlocked at Oren’s shop. Walk through the refuge’s far-left rear corner to find Vrykólakas.' : '\nThe vampire’s riddle: '+VAMPIRE_RIDDLE+' '+riddleClues+` (${game.vampireRiddleStep}/3 actions completed.)`;
+  if(game.vampireRiddleStarted) $('#journalQuest').textContent += '\nThe vampire’s riddle: '+VAMPIRE_RIDDLE;
   $("#journalContract").textContent =
     Math.min(3, Math.max(0, game.wins - game.contracts * 3)) +
     " / 3 victories for Oren’s next supply contract. Claim inside his shop.";
@@ -2778,6 +2880,9 @@ function earthshatter() {
     abilityCooldown > 0
   )
     return;
+  if(game.equipped==='Vampire Sword') {
+    bloodBattle.active=10;abilityCooldown=50;playSound('shard');toast('Blood Sucker · damage empowers bat health for 10 seconds');return;
+  }
   const targets = enemies.filter((e) => e.t >= 0 && e.model.visible);
   if (!targets.length) {
     toast("Wait until enemies arrive.");
@@ -2788,14 +2893,14 @@ function earthshatter() {
     impact = target.model.position.clone();
   for (const enemy of targets)
     if (enemy.model.position.distanceTo(impact) < 5) {
-      enemy.hp -= 120 * altarMultiplier(game.upgrades.damage);
+      damageEnemy(enemy,120 * altarMultiplier(game.upgrades.damage));
       enemy.stun = 2.5;
       enemy.hitFlash = 0.15;
     }
   abilityCooldown = 14;
   crackEffect(impact, true);
   impactDust(impact, "#a2e2d9", 32);
-  playSound("hit");
+  playSound("earthshatter");
   toast("Earthshatter · leading pack stunned");
 }
 function slashEffect(position) {
@@ -2867,6 +2972,8 @@ function disposeEffect(mesh) {
   materials.forEach((m) => m.dispose());
 }
 function showResult(won, title, text) {
+  for(const bat of bloodBattle.bats)disposeEffect(bat.model);
+  bloodBattle=newBloodBattle();
   $("#resultTitle").textContent = title;
   $("#resultText").textContent = text;
   const drops = Object.entries(game.materials)
@@ -2902,7 +3009,7 @@ function showResult(won, title, text) {
   $("#battleDialogue").hidden = true;
   $("#rally").disabled = true;
   updateHUD();
-  playSound(won ? "reward" : "hit");
+  playSound(won ? "victory" : "defeat");
 }
 function returnFromBattle() {
   const safe = {
@@ -3087,6 +3194,7 @@ if (import.meta.env.DEV && new URLSearchParams(location.search).has("test"))
       zone: currentZone,
       battleState,
       placed,
+      companionVisible:vampireCompanion.visible,
       bossStage,
       environment: battle.userData.environment,
       enemies: enemies.map((e) => ({ type: e.type, hp: e.hp, t: e.t })),
@@ -3096,6 +3204,7 @@ if (import.meta.env.DEV && new URLSearchParams(location.search).has("test"))
       stats: attackStats(),
       repositionAvailable,
       abilityCooldown,
+      blood:{active:bloodBattle.active,blessing:bloodBattle.blessing,bats:bloodBattle.bats.map(b=>({t:b.t,hp:b.hp}))},
     }),
     load: (data) => {
       $("#titleScreen").hidden = true;

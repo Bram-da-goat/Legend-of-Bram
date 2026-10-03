@@ -1,5 +1,6 @@
 // Shared rules used by the game and the regression tests. Keep save names stable.
 export const WEAPONS = {
+  "Vampire Sword": { damage: 200, range: 4, aoe: 2, cooldown: .39, animation: .32 },
   Hammer: { damage: 65, range: 4.8, aoe: 3.2, cooldown: 0.82, animation: 0.62 },
   "Woodcutter Axe": {
     damage: 42,
@@ -87,6 +88,9 @@ export function extensions() {
     vampireRiddleStep: 0,
     vampireRiddleSolved: false,
     metVrykolakas: false,
+    vampireRecruited: false,
+    vampireExp: 0,
+    vampirePaths: {blood:0,night:0,vitality:0},
     journeyComplete: false,
     seenStories: [],
     stats: { bats: 0, rocks: 0, orcs: 0 },
@@ -97,6 +101,9 @@ const count = (value) =>
   Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0;
 export function restore(defaults, data = {}) {
   const g = { ...defaults, ...extensions(), ...data };
+  g.vampireRecruited = data.vampireRecruited === true;
+  g.vampireExp=Number.isFinite(data.vampireExp)?Math.max(0,data.vampireExp):0;
+  g.vampirePaths=Object.fromEntries(['blood','night','vitality'].map(k=>[k,Math.min(5,count(data.vampirePaths?.[k]))]));
   g.extinguishedLanterns = [...new Set(Array.isArray(data.extinguishedLanterns) ? data.extinguishedLanterns : [])].filter(id => Number.isInteger(id) && id >= 0 && id < 4);
   g.vampireRiddleSolved=data.vampireRiddleSolved===true;
   g.vampireRiddleStarted=g.vampireRiddleSolved || data.vampireRiddleStarted===true;
@@ -257,6 +264,10 @@ export function buy(g, id) {
   return true;
 }
 export function affordability(g, id) {
+  if(id==='vampireSword' || id==='recruitVampire') {
+    const sword=id==='vampireSword',owned=sword?g.weapons.includes('Vampire Sword'):g.vampireRecruited;
+    return {owned,short:!owned && ((g.materials['Vampire Shard']||0)<1 || (sword && ((g.materials['Bat Wing']||0)<500 || g.gold<3000))),verb:sword?'craft':'recruit'};
+  }
   if (STOCK[id]) {
     const [name,cost,unique]=STOCK[id];
     const owned=Boolean(unique && g.keyItems.includes(name));
@@ -283,6 +294,30 @@ export function craft(g, id) {
   g.equipped = name;
   return true;
 }
+// The caller supplies the current region; these offers never belong to normal shops.
+export function vampireTrade(g,id,zone) {
+  if(zone!=='vampireRuin' || !['vampireSword','recruitVampire'].includes(id)) return false;
+  const status=affordability(g,id);
+  if(status.owned || status.short) return false;
+  g.materials['Vampire Shard']--;
+  if(id==='vampireSword') {
+    g.materials['Bat Wing']-=500;g.gold-=3000;
+    g.weapons.push('Vampire Sword');g.equipped='Vampire Sword';
+  } else {g.vampireRecruited=true;g.vampireExp=0;g.vampirePaths={blood:0,night:0,vitality:0};}
+  return true;
+}
+export const VAMPIRE_PATHS={blood:'Blood Magic',night:'Night Command',vitality:'Ancient Vitality'};
+export function vampireLevelCost(g,key){return 100*((g.vampirePaths?.[key]||0)+1);}
+export function upgradeVampire(g,key){
+  if(!g.vampireRecruited || !VAMPIRE_PATHS[key])return false;
+  const levels=g.vampirePaths;
+  if(levels[key]>=5 || Object.entries(levels).some(([k,n])=>k!==key && n>0 && n<5) || g.vampireExp<vampireLevelCost(g,key))return false;
+  g.vampireExp-=vampireLevelCost(g,key);levels[key]++;return true;
+}
+export function vampireStats(g){
+  const p=g.vampirePaths||{};
+  return {damage:90+40*(p.blood||0),aoe:.4+.45*(p.blood||0),range:6+.6*(p.night||0),cooldown:1.2-.12*(p.night||0),stun:.25*(p.vitality||0)};
+}
 export function findEcho(g, id) {
   const secret = SECRETS.find((s) => s.id === id);
   if (!secret || g.echoes.includes(id)) return false;
@@ -307,7 +342,7 @@ export function claimContract(g, variant='standard') {
   g.contracts++;
   g.gold += 180;
   if(variant==='vampire') {
-    g.materials['Bat Wing']=(g.materials['Bat Wing']||0)+3;
+    g.materials['Bat Wing']=(g.materials['Bat Wing']||0)+25;
     g.materials.Wood=(g.materials.Wood||0)+8;
   } else {
     g.materials["Goblin Bone"] += 5;

@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 
-// Character-only finishing pass: keep the scenery faceted and all rig pivots intact.
+// Preserve rig pivots while softening character silhouettes and retaining material properties.
 function softenCharacter(root, lightweight = false) {
   const materials = new Map();
   root.traverse((mesh) => {
@@ -23,9 +23,9 @@ function softenCharacter(root, lightweight = false) {
     if (geometry) { mesh.geometry = geometry; original.dispose(); }
     const old = mesh.material;
     if (!materials.has(old)) materials.set(old, new THREE.MeshStandardMaterial({
-      color: old.color, roughness: 0.78, metalness: 0,
+      color: old.color, roughness: old.roughness ?? 0.78, metalness: old.metalness ?? 0,
       emissive: old.emissive, emissiveIntensity: old.emissiveIntensity,
-      side: old.side,
+      side: old.side, transparent:old.transparent, opacity:old.opacity, depthWrite:old.depthWrite,
     }));
     mesh.material = materials.get(old);
   });
@@ -33,17 +33,7 @@ function softenCharacter(root, lightweight = false) {
   return root;
 }
 
-// Storybook diorama: faceted silhouettes, warm materials, fully rigged characters.
-const ramp = new THREE.DataTexture(
-  new Uint8Array([
-    95, 95, 95, 255, 155, 155, 155, 255, 215, 215, 215, 255, 255, 255, 255, 255,
-  ]),
-  4,
-  1,
-  THREE.RGBAFormat,
-);
-ramp.minFilter = ramp.magFilter = THREE.NearestFilter;
-ramp.needsUpdate = true;
+// Physical lighting across characters, architecture, terrain and props.
 const mat = (
   color,
   roughness = 0.9,
@@ -51,9 +41,9 @@ const mat = (
   emissive = null,
   intensity = 0,
 ) =>
-  new THREE.MeshToonMaterial({
-    color: new THREE.Color(color).offsetHSL(0, 0.08, 0.045),
-    gradientMap: ramp,
+  new THREE.MeshStandardMaterial({
+    color: new THREE.Color(color),
+    roughness, metalness,
     emissive: emissive || "#000000",
     emissiveIntensity: intensity,
   });
@@ -66,7 +56,11 @@ function part(parent, geometry, material, position = [0, 0, 0], name = "") {
   return mesh;
 }
 function box(parent, size, material, position, name = "") {
-  return part(parent, new THREE.BoxGeometry(...size), material, position, name);
+  const edge=Math.min(...size);
+  const geometry=edge>=.08 && Math.max(...size)<8
+    ? new RoundedBoxGeometry(...size,1,Math.min(.035,edge*.08))
+    : new THREE.BoxGeometry(...size);
+  return part(parent, geometry, material, position, name);
 }
 function ball(parent, r, material, position, detail = 0) {
   return part(
@@ -120,9 +114,9 @@ function unit(kind = "bram") {
                 ? "#4a345d"
                 : "#6c8496",
     );
-  const metal = mat(cursed ? "#667778" : "#a7bcc6"),
+  const metal = mat(cursed ? "#667778" : "#a7bcc6",.38,.65),
     dark = mat("#293b45"),
-    gold = mat("#d5b063");
+    gold = mat("#d5b063",.34,.65);
   part(
     visual,
     new THREE.CylinderGeometry(0.31, 0.4, 0.62, 7),
@@ -131,6 +125,8 @@ function unit(kind = "bram") {
   );
   box(visual, [0.68, 0.1, 0.48], dark, [0, 0.81, 0]);
   box(visual, [0.13, 0.13, 0.06], gold, [0, 0.81, 0.26]);
+  for(const x of [-.21,.21])box(visual,[.025,.32,.02],dark,[x,1.05,.3]);
+  for(const y of [.98,1.12,1.25])ball(visual,.022,gold,[0,y,.315],1);
   const leftLeg = limb(visual, -0.18, 0.68, dark, true),
     rightLeg = limb(visual, 0.18, 0.68, dark, true);
   const leftArm = limb(visual, -0.43, 1.31, armored ? metal : skin),
@@ -249,9 +245,9 @@ export function setBramWeapon(root, weapon) {
   const mount = root.userData.rig.hammer;
   clearObject(mount);
   const wood = mat("#90603b"),
-    iron = mat("#799aa8"),
-    edge = mat("#cedad6"),
-    leather = mat("#493f39");
+    iron = mat("#799aa8",.4,.7),
+    edge = mat("#cedad6",.25,.8),
+    leather = mat("#493f39",.85);
   part(
     mount,
     new THREE.CylinderGeometry(0.055, 0.07, 1.25, 7),
@@ -264,7 +260,16 @@ export function setBramWeapon(root, weapon) {
       y,
       0,
     ]).rotation.x = Math.PI / 2;
-  if (weapon === "Woodcutter Axe") {
+  if (weapon === "Vampire Sword") {
+    clearObject(mount);
+    box(mount,[.1,.45,.1],leather,[0,-.14,0]);
+    box(mount,[.65,.09,.16],iron,[0,.1,0]);
+    box(mount,[.16,1,.07],edge,[0,.65,0]);
+    part(mount,new THREE.ConeGeometry(.115,.35,4),edge,[0,1.3,0]);
+    const ruby=mat('#bf194d',.25,.4,'#ec2255',.7);
+    box(mount,[.04,.85,.085],ruby,[0,.65,0]);
+    part(mount,new THREE.OctahedronGeometry(.12),ruby,[0,-.4,0]);
+  } else if (weapon === "Woodcutter Axe") {
     const shape = new THREE.Shape();
     shape.moveTo(-0.08, 0.85);
     shape.lineTo(0.44, 0.88);
@@ -370,7 +375,7 @@ export function createSkeletonBoss(enraged = false) {
   box(rightArm,[.13,.65,.06],enraged?glow:bone,[0,-1.18,.14]);
   root.userData.rig={visual,leftLeg,rightLeg,leftArm,rightArm};
   root.scale.setScalar(enraged?1.65:1.4);
-  return root;
+  return softenCharacter(root);
 }
 export function createOrc() {
   const root = unit("orc");
@@ -438,7 +443,7 @@ export function createVampire() {
   }
   box(visual,[.18,.12,.07],red,[0,1.37,.3]);
   const leftArm=limb(visual,-.4,1.29,skin),rightArm=limb(visual,.4,1.29,skin),leftLeg=limb(visual,-.18,.62,black,true),rightLeg=limb(visual,.18,.62,black,true);
-  root.userData.rig={visual,leftArm,rightArm,leftLeg,rightLeg};return root;
+  root.userData.rig={visual,leftArm,rightArm,leftLeg,rightLeg};return softenCharacter(root);
 }
 export function createBat() {
   const root = new THREE.Group(),
@@ -460,6 +465,10 @@ export function createBat() {
     const membrane = mat("#9e769f");
     membrane.side = THREE.DoubleSide;
     part(wing, new THREE.ShapeGeometry(shape), membrane);
+    for(const [x,y] of [[side*.76,.28],[side*.59,-.11],[side*.25,-.23]]) {
+      const length=Math.hypot(x,y),rib=part(wing,new THREE.CylinderGeometry(.009,.014,length,6),mat('#5d455e'),[x/2,y/2,.015]);
+      rib.rotation.z=-Math.atan2(x,y);
+    }
     wings.push(wing);
     part(visual, new THREE.ConeGeometry(0.09, 0.24, 3), mat("#665484"), [
       side * 0.12,
@@ -479,9 +488,10 @@ export function createRockMonster() {
   root.add(visual);
   const stone = mat("#85908a"),
     moss = mat("#577b68");
-  const torso = ball(visual, 0.62, stone, [0, 0.87, 0]);
+  const torso = ball(visual, 0.62, stone, [0, 0.87, 0],1);
   torso.scale.set(1, 0.85, 0.75);
-  ball(visual, 0.38, moss, [0, 1.47, 0]);
+  ball(visual, 0.38, moss, [0, 1.47, 0],1);
+  for(let i=0;i<4;i++)box(visual,[.025,.17,.02],mat('#34443f'),[(i-1.5)*.18,.95,.45]).rotation.z=(i%2?.6:-.4);
   for (const x of [-0.14, 0.14])
     box(visual, [0.1, 0.055, 0.06], mat("#f8d384", 1, 0, "#dc9c39", 0.5), [
       x,
@@ -561,7 +571,7 @@ export function createTree(scale = 1, autumn = false) {
     trunk = mat("#725441");
   part(
     root,
-    new THREE.CylinderGeometry(0.1, 0.24, 1.7, 6),
+    new THREE.CylinderGeometry(0.1, 0.24, 1.7, 12),
     trunk,
     [0, 0.85, 0],
   );
@@ -571,11 +581,16 @@ export function createTree(scale = 1, autumn = false) {
   for (let i = 0; i < 3; i++) {
     const crown = part(
       root,
-      new THREE.ConeGeometry(1.02 - i * 0.18, 1.45, 7),
+      new THREE.ConeGeometry(1.02 - i * 0.18, 1.45, 12,2),
       mat(colors[i]),
       [0, 1.6 + i * 0.56, 0],
     );
     crown.rotation.y = i * 0.6;
+  }
+  for(let i=0;i<5;i++) {
+    const angle=i*Math.PI*2/5;
+    const rootWood=part(root,new THREE.ConeGeometry(.085,.6,7),trunk,[Math.cos(angle)*.2,.18,Math.sin(angle)*.2]);
+    rootWood.rotation.z=.9;rootWood.rotation.y=angle;
   }
   root.scale.setScalar(scale);
   root.userData.radius = 0.42 * scale;
@@ -583,7 +598,14 @@ export function createTree(scale = 1, autumn = false) {
 }
 export function createRock(scale = 1) {
   const root = new THREE.Group(),
-    stone = ball(root, scale, mat("#81958b"), [0, scale * 0.32, 0]);
+    stone = ball(root, scale, mat("#81958b",.96), [0, scale * 0.32, 0],1);
+  const positions=stone.geometry.attributes.position;
+  for(let i=0;i<positions.count;i++) {
+    const x=positions.getX(i),y=positions.getY(i),z=positions.getZ(i);
+    const weathering=1+.07*Math.sin(x*7+y*11+z*13);
+    positions.setXYZ(i,x*weathering,y*weathering,z*weathering);
+  }
+  stone.geometry.computeVertexNormals();
   stone.scale.set(1.1, 0.62, 0.84);
   stone.rotation.y = 0.45;
   root.userData.radius = scale * 0.85;
@@ -597,10 +619,10 @@ export function createPortal() {
       transparent: true,
       opacity: 0.78,
     });
-  part(root, new THREE.CylinderGeometry(1.5, 1.8, 0.3, 9), stone, [0, 0.15, 0]);
+  part(root, new THREE.CylinderGeometry(1.5, 1.8, 0.3, 24), stone, [0, 0.15, 0]);
   const ring = part(
       root,
-      new THREE.TorusGeometry(1.15, 0.1, 6, 32),
+      new THREE.TorusGeometry(1.15, 0.1, 12, 48),
       glow,
       [0, 0.34, 0],
     ),
@@ -636,7 +658,7 @@ export function createAltar() {
     stone = mat("#bdbea8");
   part(
     root,
-    new THREE.CylinderGeometry(1.45, 1.85, 0.35, 8),
+    new THREE.CylinderGeometry(1.45, 1.85, 0.35, 20),
     stone,
     [0, 0.18, 0],
   );
@@ -698,6 +720,9 @@ export function createBuilding(type = "house") {
       rib.rotation.z = -side * 0.56;
     }
   box(root, [1.05, 1.95, 0.12], beam, [0, 1.2, 2]);
+  for(const x of [-.32,0,.32])box(root,[.018,1.72,.015],mat('#443831'),[x,1.2,2.07]);
+  for(const y of [.65,1.7])box(root,[.85,.06,.035],mat('#4b5254',.5,.65),[0,y,2.09]);
+  for(let i=0;i<7;i++)box(root,[.67,.18,.08],mat(i%2?'#7c827d':'#92938a'),[-2.3+i*.76,.25,2.04]);
   box(root, [0.09, 0.09, 0.05], mat("#e7b369"), [0.3, 1.2, 2.09]);
   for (const x of [-1.5, 1.5]) {
     box(root, [0.9, 0.85, 0.12], beam, [x, 1.55, 2]);

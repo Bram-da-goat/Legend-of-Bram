@@ -244,3 +244,6 @@ button:disabled {background:#35414b;color:#aab7bf;border-color:#53626c}
  .cinematic article p,.battle-dialogue p {font-size:22px}.toast,.action-prompt {font-size:17px}
  .boss-bar small {font-size:15px}.boss-bar span {font-size:15px}
 }
+/* Recruited companion access stays clear of the left hero panel. */
+#vampireParty{position:absolute;left:0;right:auto;bottom:calc(100% + 10px);width:100%;z-index:35;padding:12px;background:#342235;color:#ffd2dc;border:3px solid #ad5978;box-shadow:4px 4px #15111c;}
+body[data-mode="title"] #vampireParty,body[data-mode="cutscene"] #vampireParty{display:none;}
