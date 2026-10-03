@@ -14,7 +14,7 @@ import {
   restore,
   weaponStats,
   vampireTrade,
-  VAMPIRE_PATHS,vampireLevelCost,upgradeVampire,vampireStats,
+  VAMPIRE_PATHS,vampireLevelCost,upgradeVampire,vampireStats,vampireStun,applyBloodLoss,
   altarMultiplier,
   nextAltarPercent,
   enemyLoot, awardSkeleton, SHARD_SUMMON,
@@ -519,6 +519,8 @@ const vampireCompanion = createVampire();
 vampireCompanion.visible=false;
 let vampireAttackCooldown=0;
 let bloodBattle=newBloodBattle();
+let vampirePlaced=false;
+const bloodOrbs=[],bloodPools=[];
 meadow.add(player);
 const playerRig = player.userData.rig;
 focuses.player = player;
@@ -1229,6 +1231,9 @@ function resetBramPose() {
   pendingAttack = null;
 }
 function clearBattle() {
+  vampirePlaced=false;
+  for(const effect of [...bloodOrbs,...bloodPools])disposeEffect(effect.mesh);
+  bloodOrbs.length=bloodPools.length=0;
   for(const bat of bloodBattle.bats)disposeEffect(bat.model);
   bloodBattle=newBloodBattle();
   vampireCompanion.removeFromParent();vampireCompanion.visible=false;vampireAttackCooldown=0;
@@ -1327,6 +1332,8 @@ function setupBattle(data) {
   battleElapsed = 0;
   prep = 30;
   placed = false;
+  $('#placeHero').value='bram';
+  $('#placeHero option[value="vampire"]').disabled=!game.vampireRecruited;
   spawned = 0;
   waveClock = 0;
   lastAttack = -10;
@@ -1415,19 +1422,25 @@ canvas.addEventListener("pointerdown", (event) => {
     toast("Place Bram on open ground away from the path.");
     return;
   }
-  player.position.set(p.x, 0, p.z);
-  player.visible = true;
-  placed = true;
+  placeBattleHero(p.x,p.z);
   playSound('place');
   $("#startWave").disabled = false;
   $("#tutorial").hidden = true;
   $("#battleObjective").textContent =
-    "Bram is ready. Start the wave now or keep preparing.";
+    "Hero placed. Choose another hero to place, or start the wave.";
 });
+function placeBattleHero(x,z){
+  if(battleState!=='prepare' || Math.abs(x)>20 || Math.abs(z)>20 || distanceToPath(new THREE.Vector3(x,0,z))<1.8)return false;
+  if($('#placeHero').value==='vampire'){
+    if(!game.vampireRecruited)return false;
+    battle.add(vampireCompanion);vampireCompanion.position.set(x,0,z);vampirePlaced=true;vampireCompanion.visible=true;
+  }else{player.position.set(x,0,z);player.visible=true;placed=true;}
+  $('#startWave').disabled=false;return true;
+}
 function beginWave() {
   if (state !== "battle" || battleState !== "prepare") return;
-  if (!placed) {
-    toast("Place Bram first.");
+  if (!placed && !vampirePlaced) {
+    toast("Place a hero first.");
     return;
   }
   battleState = "combat";
@@ -1812,7 +1825,7 @@ function updateBattle(dt, time) {
   if (battleState === "result") return;
   updateRange();
   if (battleState === "prepare") {
-    if (placed) {
+    if (placed || vampirePlaced) {
       prep -= dt;
       $("#battleTimer").textContent = Math.max(0, Math.ceil(prep));
       if (prep <= 0) beginWave();
@@ -1826,6 +1839,7 @@ function updateBattle(dt, time) {
       ? `Q · ${Math.ceil(abilityCooldown)}s`
       : game.equipped==='Vampire Sword' ? "Q · Blood Sucker" : "Q · Earthshatter";
   updateBloodBats(dt,time);
+  updateBloodMagic(dt);
   if (battleDialogueTimer > 0) {
     battleDialogueTimer -= dt;
     if (battleDialogueTimer <= 0) $("#battleDialogue").hidden = true;
@@ -1840,6 +1854,8 @@ function updateBattle(dt, time) {
   }
   for (let i = enemies.length - 1; i >= 0; i--) {
     const e = enemies[i];
+    e.stunImmunity=Math.max(0,(e.stunImmunity||0)-dt);
+    if(e.bloodLoss>0){const duration=Math.min(dt,e.bloodLoss);damageEnemy(e,50*duration);e.bloodLoss-=duration;}
     if (e.hp <= 0) {
       killEnemy(e);
       continue;
@@ -2187,14 +2203,13 @@ function openVampireService() {
   service('Vrykólakas','Pacts of the first night',[{id:'pacts',name:'Vampire pacts'}],{pacts:()=>
     `<p>You carry ${game.materials['Vampire Shard']||0} Vampire Shards and ${game.materials['Bat Wing']||0} Bat Wings. Each offer consumes its own shard.</p>`+
     card('Vampire Sword','200 damage · 4 range · 2 AOE · every 0.39 seconds. Summons bats every 3 seconds. Blood Sucker empowers their health.',game.weapons.includes('Vampire Sword')?'Owned':'Craft · 1 Vampire Shard + 500 Bat Wings + 3,000 gold','vampireSword')+
-    card('Recruit Vrykólakas','Joins Bram in battle after placement. Blood magic: 90 damage, 6 range, every 1.2 seconds.',game.vampireRecruited?'Recruited':'Recruit · 1 Vampire Shard','recruitVampire')
+    card('Recruit Vrykólakas','Place him separately in battle. Blood orb: 450 contact damage, 6 range, every 3 seconds. Blood pools apply 50 damage/second without stacking.',game.vampireRecruited?'Recruited':'Recruit · 1 Vampire Shard','recruitVampire')
   });
 }
 function updateVampireCompanion(dt,time) {
-  vampireCompanion.visible=Boolean(game.vampireRecruited && placed && player.visible && battleState!=='result');
+  vampireCompanion.visible=Boolean(game.vampireRecruited && vampirePlaced && battleState!=='result');
   if(!vampireCompanion.visible) return;
   if(vampireCompanion.parent!==battle) battle.add(vampireCompanion);
-  vampireCompanion.position.copy(player.position).add(new THREE.Vector3(.9,0,.7));
   vampireAttackCooldown=Math.max(0,vampireAttackCooldown-dt);
   vampireCompanion.position.y=.06+Math.sin(time*2)*.04;
   if(battleState!=='combat') return;
@@ -2204,14 +2219,31 @@ function updateVampireCompanion(dt,time) {
   vampireCompanion.rotation.y=Math.atan2(target.model.position.x-vampireCompanion.position.x,target.model.position.z-vampireCompanion.position.z);
   if(vampireAttackCooldown>0) return;
   vampireAttackCooldown=stats.cooldown;
-  for(const enemy of enemies)if(enemy.hp>0 && enemy.t>=0 && enemy.model.visible && enemy.model.position.distanceTo(target.model.position)<=stats.aoe){damageEnemy(enemy,stats.damage);enemy.hitFlash=.15;enemy.stun=Math.max(enemy.stun||0,stats.stun);}
-  const rank=game.vampirePaths.blood;
-  const beam=new THREE.Mesh(new THREE.CylinderGeometry(.035+rank*.015,.035+rank*.015,1,6),new THREE.MeshBasicMaterial({color:['#eb3268','#ee2953','#f33b56','#ff4860','#ff6375','#ffa0b0'][rank],transparent:true,opacity:.8}));
-  if(rank>0)impactDust(target.model.position,'#eb3268',4+rank*3);
-  const from=vampireCompanion.position.clone().add(new THREE.Vector3(0,1.2,0)),to=target.model.position.clone().add(new THREE.Vector3(0,.8,0));
-  beam.position.copy(from).add(to).multiplyScalar(.5);beam.scale.y=from.distanceTo(to);
-  beam.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),to.clone().sub(from).normalize());
-  battle.add(beam);effects.push({mesh:beam,age:0,lifetime:.2});playSound('slash');
+  const mesh=new THREE.Mesh(new THREE.SphereGeometry(.25+.035*game.vampirePaths.blood,12,8),mat('#bc1743',.25,0,'#dd1647',1));
+  mesh.position.copy(vampireCompanion.position).add(new THREE.Vector3(0,.8,0));battle.add(mesh);
+  bloodOrbs.push({mesh,target,goal:target.model.position.clone(),stats,life:5});playSound('slash');
+}
+function updateBloodMagic(dt){
+  for(let i=bloodOrbs.length-1;i>=0;i--){
+    const orb=bloodOrbs[i];orb.life-=dt;
+    if(enemies.includes(orb.target)&&orb.target.hp>0)orb.goal.copy(orb.target.model.position);
+    const goal=orb.goal.clone();goal.y=.8;
+    const delta=goal.sub(orb.mesh.position),distance=delta.length();
+    orb.mesh.position.addScaledVector(delta.normalize(),Math.min(distance,4*dt));
+    const hit=enemies.find(e=>e.hp>0&&e.t>=0&&e.model.visible&&Math.hypot(e.model.position.x-orb.mesh.position.x,e.model.position.z-orb.mesh.position.z)<.65);
+    if(hit || distance<.1 || orb.life<=0){
+      if(hit){damageEnemy(hit,orb.stats.damage*5);hit.hitFlash=.2;
+        vampireStun(hit,orb.stats.stun);}
+      const pool=new THREE.Mesh(new THREE.CircleGeometry(Math.max(1.5,orb.stats.aoe),32),new THREE.MeshBasicMaterial({color:'#c51c48',transparent:true,opacity:.6,depthWrite:false,side:THREE.DoubleSide}));
+      pool.rotation.x=-Math.PI/2;pool.position.set(orb.mesh.position.x,.12,orb.mesh.position.z);battle.add(pool);
+      bloodPools.push({mesh:pool,radius:Math.max(1.5,orb.stats.aoe),life:4});impactDust(pool.position,'#db2652',16);
+      disposeEffect(orb.mesh);bloodOrbs.splice(i,1);
+    }
+  }
+  for(let i=bloodPools.length-1;i>=0;i--){const pool=bloodPools[i];pool.life-=dt;pool.mesh.material.opacity=.6*Math.min(1,pool.life);
+    for(const enemy of enemies)if(enemy.hp>0&&enemy.t>=0&&enemy.model.visible&&enemy.model.position.distanceTo(pool.mesh.position)<pool.radius)applyBloodLoss(enemy);
+    if(pool.life<=0){disposeEffect(pool.mesh);bloodPools.splice(i,1);}
+  }
 }
 function damageEnemy(enemy,amount) {
   const actual=Math.min(Math.max(0,enemy.hp),amount);
@@ -2245,7 +2277,7 @@ function updateBloodBats(dt,time) {
 }
 function openVampireUpgrades(){
   if(!game.vampireRecruited || !['world','battle','menu'].includes(state))return;
-  const descriptions={blood:'Each rank adds 40 damage and 0.45 blood-burst radius. Rank V: 290 damage, 2.65 AOE.',night:'Each rank adds 0.6 range and attacks 0.12 seconds faster. Rank V: 9 range, 0.6-second attacks.',vitality:'Each rank adds 0.25 seconds of binding stun to every hit. Rank V: binds enemies for 1.25 seconds.'};
+  const descriptions={blood:'Each rank adds 200 orb contact damage and 0.45 burst radius (minimum radius 1.5). Rank V: 1,450 contact damage, 2.65 radius. Pools last 4 seconds and apply non-stacking 50/second blood loss lasting 3 seconds after leaving.',night:'Each rank adds 0.6 range and attacks 0.2 seconds faster. Rank V: 9 range, 2-second attacks. Orbs travel at 4 units/second.',vitality:'Each rank adds 0.1 seconds of stun on orb contact. Rank V: 0.5 seconds. Enemies are immune to this stun for 3 seconds after it ends.'};
   service('Vrykólakas','Choose a path · finish its five ranks before another',[{id:'vampireUpgrades',name:'Vampire paths'}],{vampireUpgrades:()=>
     `<p>Available EXP: ${game.vampireExp.toLocaleString()} · Earns EXP alongside Bram after recruitment.</p>`+
     Object.entries(VAMPIRE_PATHS).map(([key,name])=>{
@@ -2847,9 +2879,11 @@ function buildBattleMarkers() {
 }
 function updateRange() {
   if (!rangeDisc) return;
-  rangeDisc.visible = state === "battle" && placed && battleState !== "result";
-  rangeDisc.position.set(player.position.x, 0.09, player.position.z);
-  rangeDisc.scale.setScalar(attackStats().range);
+  const vampireSelected=$('#placeHero').value==='vampire';
+  const unit=vampireSelected?vampireCompanion:player;
+  rangeDisc.visible = state === "battle" && (vampireSelected?vampirePlaced:placed) && battleState !== "result";
+  rangeDisc.position.set(unit.position.x, 0.09, unit.position.z);
+  rangeDisc.scale.setScalar(vampireSelected?vampireStats(game).range:attackStats().range);
   guideMarker.visible = battleState === "prepare" && !!previewPosition;
   if (previewPosition) {
     guideMarker.position.set(previewPosition.x, 0.1, previewPosition.z);
@@ -3195,6 +3229,8 @@ if (import.meta.env.DEV && new URLSearchParams(location.search).has("test"))
       battleState,
       placed,
       companionVisible:vampireCompanion.visible,
+      vampirePlaced,
+      bloodMagic:{orbs:bloodOrbs.length,pools:bloodPools.length},
       bossStage,
       environment: battle.userData.environment,
       enemies: enemies.map((e) => ({ type: e.type, hp: e.hp, t: e.t })),
@@ -3219,14 +3255,7 @@ if (import.meta.env.DEV && new URLSearchParams(location.search).has("test"))
       activeBand = null;
       setupBattle(data);
     },
-    place: (x, z) => {
-      if (distanceToPath(new THREE.Vector3(x, 0, z)) < 1.8) return false;
-      player.position.set(x, 0, z);
-      placed = true;
-      player.visible = true;
-      $("#startWave").disabled = false;
-      return true;
-    },
+    place: placeBattleHero,
     begin: beginWave,
     ability: earthshatter,
     reposition,

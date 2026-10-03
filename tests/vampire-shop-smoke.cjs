@@ -18,7 +18,9 @@ const assert=require('node:assert/strict');
   await api('step',.1);assert.equal((await api('snapshot')).companionVisible,false);
   const path=await api('path');let placed=false;
   for(const p of path) {if(await api('place',p.x+3,p.z)){placed=true;break;}}
-  assert.ok(placed);await api('begin');await api('step',12);assert.equal((await api('snapshot')).companionVisible,true);
+  assert.ok(placed);await api('step',.1);assert.equal((await api('snapshot')).companionVisible,false);
+  await page.locator('#placeHero').selectOption('vampire');assert.ok(await api('place',19,19));
+  await api('begin');await api('step',12);assert.equal((await api('snapshot')).companionVisible,true);
   await api('clear');assert.equal((await api('snapshot')).companionVisible,false);
   assert.deepEqual(errors,[]);console.log('PASS vampire NPC trades, sword equipment, saved recruitment and battle companion');
  } finally {await browser.close();}

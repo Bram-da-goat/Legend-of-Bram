@@ -316,8 +316,13 @@ export function upgradeVampire(g,key){
 }
 export function vampireStats(g){
   const p=g.vampirePaths||{};
-  return {damage:90+40*(p.blood||0),aoe:.4+.45*(p.blood||0),range:6+.6*(p.night||0),cooldown:1.2-.12*(p.night||0),stun:.25*(p.vitality||0)};
+  return {damage:90+40*(p.blood||0),aoe:.4+.45*(p.blood||0),range:6+.6*(p.night||0),cooldown:3-.2*(p.night||0),stun:.1*(p.vitality||0)};
 }
+export function vampireStun(enemy,duration){
+  if(enemy.stunImmunity>0 || duration<=0)return false;
+  const capped=Math.min(.5,duration);enemy.stun=Math.max(enemy.stun||0,capped);enemy.stunImmunity=capped+3;return true;
+}
+export function applyBloodLoss(enemy){enemy.bloodLoss=3;}
 export function findEcho(g, id) {
   const secret = SECRETS.find((s) => s.id === id);
   if (!secret || g.echoes.includes(id)) return false;
